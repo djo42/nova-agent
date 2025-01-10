@@ -19,6 +19,8 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import SearchIcon from '@mui/icons-material/Search';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import dayjs from 'dayjs';
+import { DateRangePicker } from './DateRangePicker';
+import { format } from 'date-fns';
 
 interface DateRange {
   start: Date | null;
@@ -38,6 +40,7 @@ export const BookingMask = () => {
   const [differentReturnLocation, setDifferentReturnLocation] = useState(false);
   const [pickupDate, setPickupDate] = useState<Date | null>(null);
   const [returnDate, setReturnDate] = useState<Date | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -58,6 +61,25 @@ export const BookingMask = () => {
     if (returnDate && date && returnDate < date) {
       setReturnDate(null);
     }
+  };
+
+  const handleDateSelect = (pickup: Date, returnDate: Date) => {
+    // Set pickup time to 12:30 PM
+    const pickupWithTime = new Date(pickup);
+    pickupWithTime.setHours(12, 30, 0);
+    setPickupDate(pickupWithTime);
+
+    // Set return time to 8:30 AM
+    const returnWithTime = new Date(returnDate);
+    returnWithTime.setHours(8, 30, 0);
+    setReturnDate(returnWithTime);
+  };
+
+  const formatDateDisplay = (date: Date | null) => {
+    if (!date) return '';
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${format(date, 'MMM dd')} ${hours}:${minutes}`;
   };
 
   return (
@@ -137,18 +159,35 @@ export const BookingMask = () => {
             <Grid item xs={12} md={4}>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <CustomDateTimePicker
+                  <TextField
+                    fullWidth
                     label="Pick-up date"
-                    value={pickupDate}
-                    onChange={setPickupDate}
+                    value={formatDateDisplay(pickupDate)}
+                    onClick={() => setDatePickerOpen(true)}
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <CalendarTodayIcon />
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
                 <Grid item xs={6}>
-                  <CustomDateTimePicker
+                  <TextField
+                    fullWidth
                     label="Return date"
-                    value={returnDate}
-                    onChange={setReturnDate}
-                    minDateTime={pickupDate ?? undefined}
+                    value={formatDateDisplay(returnDate)}
+                    onClick={() => setDatePickerOpen(true)}
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <CalendarTodayIcon />
+                        </InputAdornment>
+                      ),
+                    }}
                   />
                 </Grid>
               </Grid>
@@ -197,6 +236,14 @@ export const BookingMask = () => {
           </Grid>
         </Stack>
       </Box>
+
+      <DateRangePicker
+        open={datePickerOpen}
+        onClose={() => setDatePickerOpen(false)}
+        onSelect={handleDateSelect}
+        initialPickupDate={pickupDate}
+        initialReturnDate={returnDate}
+      />
     </Paper>
   );
 }; 
