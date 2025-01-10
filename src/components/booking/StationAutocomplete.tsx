@@ -1,5 +1,5 @@
-import { Autocomplete, TextField, CircularProgress, TextFieldProps, SxProps } from '@mui/material';
-import { useState, useEffect, useMemo } from 'react';
+import { Autocomplete, TextField, CircularProgress, TextFieldProps, SxProps, Box, Typography } from '@mui/material';
+import { useState, useEffect, useMemo, HTMLAttributes } from 'react';
 import { Station } from '../../types/booking';
 import { ApiClient } from '../../services/ApiClient';
 
@@ -39,8 +39,6 @@ export const StationAutocomplete = ({
         setLoading(true);
         setError(null);
         const apiClient = new ApiClient('/api');
-        // Here we would ideally have an API endpoint that searches across all stations
-        // For now, we'll fetch from a default country (e.g., Germany 'DE')
         const stations = await apiClient.request<Station[]>(
           `/stations/country/DE?corporateCustomerNumber=98765`,
           {
@@ -65,13 +63,53 @@ export const StationAutocomplete = ({
     return () => clearTimeout(timer);
   }, [inputValue]);
 
+  const sortStations = (stations: Station[]) => {
+    return stations.sort((a, b) => {
+      // Define station type priorities with more specific types
+      const typePriority: Record<string, number> = {
+        'AIRPORT': 1,
+        'TERMINAL': 1, // Also consider terminals as high priority
+        'RAILWAY': 2,
+        'TRAIN_STATION': 2,
+        'CITY': 3,
+        'DOWNTOWN': 3,
+        'other': 4
+      };
+
+      // Get station types, convert to uppercase for consistency
+      const typeA = (a.stationType || '').toUpperCase();
+      const typeB = (b.stationType || '').toUpperCase();
+
+      // Get priority for each station (default to 'other')
+      const priorityA = typePriority[typeA] || typePriority.other;
+      const priorityB = typePriority[typeB] || typePriority.other;
+
+      // Sort by priority first
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // For airports, sort by IATA code presence
+      if (priorityA === typePriority.AIRPORT) {
+        const hasIataA = !!a.stationInformation?.iataCode;
+        const hasIataB = !!b.stationInformation?.iataCode;
+        if (hasIataA !== hasIataB) {
+          return hasIataA ? -1 : 1;
+        }
+      }
+
+      // If same priority, sort alphabetically
+      return (a.title || '').localeCompare(b.title || '');
+    });
+  };
+
   const filteredOptions = useMemo(() => {
     if (inputValue.length < 3) return [];
-    return options.filter(option => 
-      option.title.toLowerCase().includes(inputValue.toLowerCase()) ||
-      option.subtitle.toLowerCase().includes(inputValue.toLowerCase()) ||
+    return sortStations(options.filter(option => 
+      option.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
+      option.subtitle?.toLowerCase().includes(inputValue.toLowerCase()) ||
       option.stationInformation?.iataCode?.toLowerCase().includes(inputValue.toLowerCase())
-    );
+    ));
   }, [options, inputValue]);
 
   return (
@@ -82,7 +120,7 @@ export const StationAutocomplete = ({
       inputValue={inputValue}
       onInputChange={(_, newInputValue) => setInputValue(newInputValue)}
       options={filteredOptions}
-      getOptionLabel={(option) => option.title}
+      getOptionLabel={(option) => option.title || ''}
       loading={loading}
       disabled={disabled}
       open={open && (loading || filteredOptions.length > 0)}
@@ -109,19 +147,14 @@ export const StationAutocomplete = ({
           }}
         />
       )}
-      renderOption={(props, option) => (
+      renderOption={(props: HTMLAttributes<HTMLLIElement>, option: Station) => (
         <li {...props}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>{option.title}</span>
-              {option.stationInformation?.iataCode && (
-                <span style={{ color: 'gray', marginLeft: 8 }}>
-                  {option.stationInformation.iataCode}
-                </span>
-              )}
-            </div>
-            <div style={{ fontSize: '0.8em', color: 'gray' }}>{option.subtitle}</div>
-          </div>
+          <Box>
+            <Typography variant="body1">{option.title}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {option.stationType?.toUpperCase()} - {option.subtitle}
+            </Typography>
+          </Box>
         </li>
       )}
     />

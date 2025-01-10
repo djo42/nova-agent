@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Box, 
   Paper,
@@ -21,6 +21,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import dayjs from 'dayjs';
 import { DateRangePicker } from './DateRangePicker';
 import { format } from 'date-fns';
+import { TimePickerDialog } from './TimePickerDialog';
 
 interface DateRange {
   start: Date | null;
@@ -41,6 +42,16 @@ export const BookingMask = () => {
   const [pickupDate, setPickupDate] = useState<Date | null>(null);
   const [returnDate, setReturnDate] = useState<Date | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [timePickerType, setTimePickerType] = useState<'pickup' | 'return'>('pickup');
+  const [tempDate, setTempDate] = useState<Date | null>(null);
+  const [returnDateTemp, setReturnDateTemp] = useState<Date | null>(null);
+  const [pickupDateTime, setPickupDateTime] = useState<Date | null>(null);
+  const [returnDateTime, setReturnDateTime] = useState<Date | null>(null);
+  const [selectedDates, setSelectedDates] = useState<{ pickup: Date | null; return: Date | null }>({
+    pickup: null,
+    return: null
+  });
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -64,22 +75,72 @@ export const BookingMask = () => {
   };
 
   const handleDateSelect = (pickup: Date, returnDate: Date) => {
-    // Set pickup time to 12:30 PM
-    const pickupWithTime = new Date(pickup);
-    pickupWithTime.setHours(12, 30, 0);
-    setPickupDate(pickupWithTime);
+    // Store both dates in selectedDates
+    setSelectedDates({
+      pickup,
+      return: returnDate
+    });
 
-    // Set return time to 8:30 AM
-    const returnWithTime = new Date(returnDate);
-    returnWithTime.setHours(8, 30, 0);
-    setReturnDate(returnWithTime);
+    // Store pickup date for time picker and show pickup time dialog
+    setTempDate(pickup);
+    setReturnDateTemp(returnDate); // Store return date for later
+    setTimePickerType('pickup');
+    setTimePickerOpen(true);
+    setDatePickerOpen(false); // Close date picker
   };
 
-  const formatDateDisplay = (date: Date | null) => {
+  const handleTimeSelect = (hours: number, minutes: number) => {
+    if (!tempDate) return;
+
+    if (timePickerType === 'pickup') {
+      // Handle pickup time selection
+      const newPickupDate = new Date(tempDate);
+      newPickupDate.setHours(hours, minutes, 0);
+      setPickupDateTime(newPickupDate);
+      
+      // Immediately proceed to return time selection
+      if (returnDateTemp) {
+        setTimeout(() => {
+          setTempDate(returnDateTemp);
+          setTimePickerType('return');
+          setTimePickerOpen(true);
+        }, 100); // Small delay to ensure smooth transition
+      }
+    } else {
+      // Handle return time selection
+      const newReturnDate = new Date(tempDate);
+      newReturnDate.setHours(hours, minutes, 0);
+      setReturnDateTime(newReturnDate);
+      setTimePickerOpen(false);
+    }
+  };
+
+  // Update pickup date display whenever either date or time changes
+  useEffect(() => {
+    if (selectedDates.pickup) {
+      const date = new Date(selectedDates.pickup);
+      if (pickupDateTime) {
+        date.setHours(pickupDateTime.getHours(), pickupDateTime.getMinutes(), 0);
+      }
+      setPickupDate(date);
+    }
+  }, [selectedDates.pickup, pickupDateTime]);
+
+  // Update return date display whenever either date or time changes
+  useEffect(() => {
+    if (selectedDates.return) {
+      const date = new Date(selectedDates.return);
+      if (returnDateTime) {
+        date.setHours(returnDateTime.getHours(), returnDateTime.getMinutes(), 0);
+      }
+      setReturnDate(date);
+    }
+  }, [selectedDates.return, returnDateTime]);
+
+  // Format display for the text fields
+  const formatDateTimeDisplay = (date: Date | null) => {
     if (!date) return '';
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${format(date, 'MMM dd')} ${hours}:${minutes}`;
+    return format(date, 'MMM dd, HH:mm');
   };
 
   return (
@@ -162,7 +223,7 @@ export const BookingMask = () => {
                   <TextField
                     fullWidth
                     label="Pick-up date"
-                    value={formatDateDisplay(pickupDate)}
+                    value={formatDateTimeDisplay(pickupDate)}
                     onClick={() => setDatePickerOpen(true)}
                     InputProps={{
                       readOnly: true,
@@ -178,7 +239,7 @@ export const BookingMask = () => {
                   <TextField
                     fullWidth
                     label="Return date"
-                    value={formatDateDisplay(returnDate)}
+                    value={formatDateTimeDisplay(returnDate)}
                     onClick={() => setDatePickerOpen(true)}
                     InputProps={{
                       readOnly: true,
@@ -243,6 +304,15 @@ export const BookingMask = () => {
         onSelect={handleDateSelect}
         initialPickupDate={pickupDate}
         initialReturnDate={returnDate}
+      />
+
+      <TimePickerDialog
+        open={timePickerOpen}
+        onClose={() => setTimePickerOpen(false)}
+        onSelect={handleTimeSelect}
+        type={timePickerType}
+        station={timePickerType === 'pickup' ? formData.pickupStation : formData.returnStation}
+        selectedDate={tempDate}
       />
     </Paper>
   );
