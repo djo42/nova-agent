@@ -13,7 +13,7 @@ export const env = {
   },
   api: {
     baseUrl: {
-      stage: 'https://api.stage.mobility.sixt.com/v1',
+      stage: '/api',
       production: 'https://api.mobility.sixt.com/v1'
     }
   }

@@ -15,19 +15,38 @@ interface AuthConfig {
   environment: 'stage' | 'production';
 }
 
+export interface AuthResult {
+  accessToken: string;
+  expiresIn: number;
+}
+
+const BASE_URLS = {
+  stage: 'https://identity-stage.goorange.sixt.com',
+  production: 'https://identity.orange.sixt.com'
+};
+
 export class AuthService {
   private readonly tokenEndpoints = env.auth.endpoints;
+  private readonly isServer = typeof window === 'undefined';
   private accessToken: string | null = null;
   private tokenExpirationTime: number | null = null;
 
   constructor(private readonly config: AuthConfig) {}
 
   private get tokenEndpoint(): string {
-    return this.tokenEndpoints[this.config.environment].token;
+    const endpoint = this.tokenEndpoints[this.config.environment].token;
+    if (this.isServer) {
+      return `${BASE_URLS[this.config.environment]}${endpoint}`;
+    }
+    return endpoint;
   }
 
   private get logoutEndpoint(): string {
-    return this.tokenEndpoints[this.config.environment].logout;
+    const endpoint = this.tokenEndpoints[this.config.environment].logout;
+    if (this.isServer) {
+      return `${BASE_URLS[this.config.environment]}${endpoint}`;
+    }
+    return endpoint;
   }
 
   private getBasicAuthHeader(): string {
@@ -35,12 +54,7 @@ export class AuthService {
     return `Basic ${Buffer.from(credentials).toString('base64')}`;
   }
 
-  async getAccessToken(): Promise<string> {
-    // Return existing token if it's still valid (with 30s buffer)
-    if (this.accessToken && this.tokenExpirationTime && Date.now() < this.tokenExpirationTime - 30000) {
-      return this.accessToken;
-    }
-
+  async getAccessToken(): Promise<AuthResult> {
     try {
       const formData = new URLSearchParams();
       formData.append('grant_type', 'client_credentials');
@@ -58,17 +72,16 @@ export class AuthService {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('Auth Error Response:', error); // For debugging
         throw new Error(error.error_description || 'Failed to obtain access token');
       }
 
       const data: TokenResponse = await response.json();
-      this.accessToken = data.access_token;
-      this.tokenExpirationTime = Date.now() + (data.expires_in * 1000);
-
-      return this.accessToken;
+      return {
+        accessToken: data.access_token,
+        expiresIn: data.expires_in
+      };
     } catch (error) {
-      console.error('Auth Error:', error); // For debugging
+      console.error('Auth Error:', error);
       throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Failed to fetch'}`);
     }
   }

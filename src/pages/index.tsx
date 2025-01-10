@@ -1,9 +1,10 @@
 import { AuthTester } from '../components/AuthTester';
+import { Layout } from '../components/Layout';
 
 export default function Home() {
   return (
-    <main className="min-h-screen p-8">
+    <Layout>
       <AuthTester />
-    </main>
+    </Layout>
   );
 } 

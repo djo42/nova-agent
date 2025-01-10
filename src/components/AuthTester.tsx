@@ -1,31 +1,40 @@
 import { useState } from 'react';
-import { AuthService } from '../services/AuthService';
-import { env } from '../config/env';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  TextField, 
+  Alert 
+} from '@mui/material';
+import { ApiClient } from '../services/ApiClient';
 
 export const AuthTester = () => {
   const [token, setToken] = useState<string>('');
   const [error, setError] = useState<string>('');
-
-  const authService = new AuthService({
-    clientId: process.env.NEXT_PUBLIC_CLIENT_ID!,
-    clientSecret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
-    environment: (process.env.NEXT_PUBLIC_ENVIRONMENT || 'stage') as 'stage' | 'production'
-  });
+  const [loading, setLoading] = useState(false);
 
   const handleGetToken = async () => {
     try {
+      setLoading(true);
       setError('');
-      const accessToken = await authService.getAccessToken();
-      setToken(accessToken);
+      const response = await fetch('/api/auth/token');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get token');
+      }
+
+      setToken(data.accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get token');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     try {
       setError('');
-      await authService.logout(token);
       setToken('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to logout');
@@ -33,41 +42,53 @@ export const AuthTester = () => {
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Auth Tester</h1>
+    <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+      <Typography variant="h4" component="h1" gutterBottom>
+        Auth Tester
+      </Typography>
       
-      <div className="space-x-4 mb-4">
-        <button
+      <Box sx={{ mb: 4, display: 'flex', gap: 2 }}>
+        <Button
+          variant="contained"
           onClick={handleGetToken}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          disabled={loading}
         >
-          Get Token
-        </button>
+          {loading ? 'Getting Token...' : 'Get Token'}
+        </Button>
         
-        <button
+        <Button
+          variant="outlined"
           onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-          disabled={!token}
+          disabled={!token || loading}
+          color="error"
         >
           Logout
-        </button>
-      </div>
+        </Button>
+      </Box>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded">
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-        </div>
+        </Alert>
       )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-2">Access Token:</label>
-        <textarea
-          value={token}
-          readOnly
-          className="w-full h-32 p-2 border rounded font-mono text-sm"
-          placeholder="Token will appear here..."
-        />
-      </div>
-    </div>
+      <TextField
+        fullWidth
+        multiline
+        rows={4}
+        value={token}
+        label="Access Token"
+        variant="outlined"
+        InputProps={{
+          readOnly: true,
+        }}
+        sx={{ 
+          fontFamily: 'monospace',
+          '& .MuiInputBase-input': {
+            fontFamily: 'monospace',
+          }
+        }}
+      />
+    </Box>
   );
 }; 
