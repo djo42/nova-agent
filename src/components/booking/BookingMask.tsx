@@ -1,17 +1,29 @@
 import { useState } from 'react';
 import { 
   Box, 
-  Typography, 
-  Autocomplete, 
-  TextField, 
-  Switch,
-  FormControlLabel,
+  Paper,
+  ToggleButton,
+  ToggleButtonGroup,
+  Button,
+  Stack,
+  InputAdornment,
   Grid,
+  TextField,
 } from '@mui/material';
-import { DateTimePicker } from '@mui/x-date-pickers';
 import { StationAutocomplete } from './StationAutocomplete';
 import { Country, Station, BookingFormData } from '../../types/booking';
 import { useCountries } from '../../hooks/useCountries';
+import { CustomDateTimePicker } from './CustomDateTimePicker';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import SearchIcon from '@mui/icons-material/Search';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import dayjs from 'dayjs';
+
+interface DateRange {
+  start: Date | null;
+  end: Date | null;
+}
 
 export const BookingMask = () => {
   const [formData, setFormData] = useState<BookingFormData>({
@@ -22,17 +34,12 @@ export const BookingMask = () => {
     pickupDate: null,
     returnDate: null,
   });
+  const [vehicleType, setVehicleType] = useState('cars');
   const [differentReturnLocation, setDifferentReturnLocation] = useState(false);
-  
-  const { countries, loading: countriesLoading, error: countriesError } = useCountries();
+  const [pickupDate, setPickupDate] = useState<Date | null>(null);
+  const [returnDate, setReturnDate] = useState<Date | null>(null);
 
-  const handleCountryChange = (type: 'pickup' | 'return') => (country: Country | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [`${type}Country`]: country,
-      [`${type}Station`]: null,
-    }));
-  };
+  const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
   const handleStationChange = (type: 'pickup' | 'return') => (station: Station | null) => {
     setFormData(prev => ({
@@ -41,101 +48,155 @@ export const BookingMask = () => {
     }));
   };
 
+  const handleDatePickerOpen = (type: 'pickup' | 'return') => {
+    setDatePickerOpen(true);
+  };
+
+  const handlePickupDateChange = (date: Date | null) => {
+    setPickupDate(date);
+    // If return date is before new pickup date, reset it
+    if (returnDate && date && returnDate < date) {
+      setReturnDate(null);
+    }
+  };
+
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Book a Car
-      </Typography>
+    <Paper 
+      elevation={3} 
+      sx={{ 
+        borderRadius: 2,
+        overflow: 'hidden',
+        backgroundColor: 'white',
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Stack spacing={2}>
+          {/* Vehicle Type Toggle */}
+          <ToggleButtonGroup
+            value={vehicleType}
+            exclusive
+            onChange={(_, value) => value && setVehicleType(value)}
+            sx={{ mb: 2 }}
+          >
+            <ToggleButton 
+              value="cars"
+              sx={{ 
+                px: 3,
+                py: 1,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                },
+              }}
+            >
+              <DirectionsCarIcon sx={{ mr: 1 }} />
+              Cars
+            </ToggleButton>
+            <ToggleButton 
+              value="trucks"
+              sx={{ 
+                px: 3,
+                py: 1,
+                '&.Mui-selected': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
+                },
+              }}
+            >
+              <LocalShippingIcon sx={{ mr: 1 }} />
+              Trucks
+            </ToggleButton>
+          </ToggleButtonGroup>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={differentReturnLocation}
-                onChange={(e) => setDifferentReturnLocation(e.target.checked)}
+          {/* Location and Date Selection */}
+          <Grid container spacing={2}>
+            {/* Pickup Location */}
+            <Grid item xs={12} md={3}>
+              <StationAutocomplete
+                value={formData.pickupStation}
+                onChange={handleStationChange('pickup')}
+                label="Pick-up location"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                placeholder="Airport, city or address"
               />
-            }
-            label="Return to different location"
-          />
-        </Grid>
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Autocomplete
-            options={countries}
-            loading={countriesLoading}
-            value={formData.pickupCountry}
-            onChange={(_, value) => handleCountryChange('pickup')(value)}
-            getOptionLabel={(option) => option.name}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Pickup Country"
-                error={!!countriesError}
-                helperText={countriesError}
-              />
-            )}
-          />
-        </Grid>
+            {/* Dates */}
+            <Grid item xs={12} md={4}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <CustomDateTimePicker
+                    label="Pick-up date"
+                    value={pickupDate}
+                    onChange={setPickupDate}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <CustomDateTimePicker
+                    label="Return date"
+                    value={returnDate}
+                    onChange={setReturnDate}
+                    minDateTime={pickupDate ?? undefined}
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
 
-        {differentReturnLocation && (
-          <Grid item xs={12} md={6}>
-            <Autocomplete
-              options={countries}
-              loading={countriesLoading}
-              value={formData.returnCountry}
-              onChange={(_, value) => handleCountryChange('return')(value)}
-              getOptionLabel={(option) => option.name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Return Country"
-                  error={!!countriesError}
-                  helperText={countriesError}
+            {/* Return Location */}
+            <Grid item xs={12} md={3}>
+              {differentReturnLocation ? (
+                <StationAutocomplete
+                  value={formData.returnStation}
+                  onChange={handleStationChange('return')}
+                  label="Return location"
                 />
+              ) : (
+                <Button
+                  onClick={() => setDifferentReturnLocation(true)}
+                  sx={{ 
+                    height: '56px', // Match height of TextField
+                    width: '100%',
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    color: 'text.secondary',
+                  }}
+                >
+                  + Different return location
+                </Button>
               )}
-            />
+            </Grid>
+
+            {/* Search Button */}
+            <Grid item xs={12} md={2}>
+              <Button
+                variant="contained"
+                fullWidth
+                sx={{ 
+                  height: '56px', // Match height of TextField
+                  backgroundColor: '#ff5f00',
+                  '&:hover': {
+                    backgroundColor: '#cc4c00',
+                  },
+                }}
+              >
+                Show cars
+              </Button>
+            </Grid>
           </Grid>
-        )}
-
-        <Grid item xs={12} md={6}>
-          <StationAutocomplete
-            countryCode={formData.pickupCountry?.iso2code ?? null}
-            value={formData.pickupStation}
-            onChange={handleStationChange('pickup')}
-            label="Pickup Location"
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <StationAutocomplete
-            countryCode={differentReturnLocation 
-              ? formData.returnCountry?.iso2code ?? null 
-              : formData.pickupCountry?.iso2code ?? null}
-            value={formData.returnStation}
-            onChange={handleStationChange('return')}
-            label="Return Location"
-            disabled={!differentReturnLocation && !formData.pickupStation}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <DateTimePicker
-            label="Pickup Date & Time"
-            value={formData.pickupDate}
-            onChange={(date) => setFormData(prev => ({ ...prev, pickupDate: date }))}
-          />
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <DateTimePicker
-            label="Return Date & Time"
-            value={formData.returnDate}
-            onChange={(date) => setFormData(prev => ({ ...prev, returnDate: date }))}
-            minDateTime={formData.pickupDate ?? undefined}
-          />
-        </Grid>
-      </Grid>
-    </Box>
+        </Stack>
+      </Box>
+    </Paper>
   );
 }; 

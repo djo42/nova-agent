@@ -18,11 +18,14 @@
     "dayjs": "^1.11.13",
     "next": "15.1.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "date-fns": "^2.30.0",
+    "react-date-range": "^1.4.0"
   },
   "devDependencies": {
     "@types/node": "22.10.5",
     "@types/react": "19.0.4",
-    "typescript": "5.7.3"
+    "typescript": "5.7.3",
+    "@types/react-date-range": "^1.4.9"
   }
 }

@@ -13,7 +13,10 @@ export interface Station {
       name: string;
       iso2code: string;
     }
-  }
+  };
+  stationInformation?: {
+    iataCode?: string;
+  };
 }
 
 export interface BookingFormData {
