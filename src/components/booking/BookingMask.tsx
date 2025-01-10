@@ -9,6 +9,8 @@ import {
   InputAdornment,
   Grid,
   TextField,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { StationAutocomplete } from './StationAutocomplete';
 import { Country, Station, BookingFormData } from '../../types/booking';
@@ -52,6 +54,7 @@ export const BookingMask = () => {
     pickup: null,
     return: null
   });
+  const [showBranchWarning, setShowBranchWarning] = useState(false);
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -143,6 +146,14 @@ export const BookingMask = () => {
     return format(date, 'MMM dd, HH:mm');
   };
 
+  const handleDateFieldClick = () => {
+    if (!formData.pickupStation) {
+      setShowBranchWarning(true);
+      return;
+    }
+    setDatePickerOpen(true);
+  };
+
   return (
     <Paper 
       elevation={3} 
@@ -150,16 +161,54 @@ export const BookingMask = () => {
         borderRadius: 2,
         overflow: 'hidden',
         backgroundColor: 'white',
+        width: '100%',
+        maxWidth: '1200px',
+        margin: '0 auto',
       }}
     >
-      <Box sx={{ p: 2 }}>
-        <Stack spacing={2}>
+      <Box sx={{ 
+        p: { xs: 2, sm: 3 },
+        '& .MuiGrid-container': {
+          mx: 0,
+          width: '100%',
+          '& > .MuiGrid-item': {
+            px: { xs: 1, sm: 1.5 },
+            mb: { xs: 2, md: 0 },
+            '&:last-child': {
+              mb: { xs: 0 },
+              pr: { xs: 1, sm: 1.5 },
+            },
+            '&:first-of-type': {
+              pl: { xs: 1, sm: 1.5 },
+            }
+          }
+        },
+        '& .MuiTextField-root, & .MuiAutocomplete-root': {
+          '& .MuiInputBase-root': {
+            height: '56px'
+          }
+        }
+      }}>
+        <Stack 
+          spacing={{ xs: 2, sm: 3 }}
+          sx={{
+            width: '100%',
+          }}
+        >
           {/* Vehicle Type Toggle */}
           <ToggleButtonGroup
             value={vehicleType}
             exclusive
             onChange={(_, value) => value && setVehicleType(value)}
-            sx={{ mb: 2 }}
+            sx={{ 
+              width: '100%',
+              px: { xs: 1, sm: 1.5 },
+              '& .MuiToggleButton-root': {
+                flex: 1,
+                py: 1.5,
+                px: { xs: 2, sm: 3 },
+              }
+            }}
           >
             <ToggleButton 
               value="cars"
@@ -198,7 +247,15 @@ export const BookingMask = () => {
           </ToggleButtonGroup>
 
           {/* Location and Date Selection */}
-          <Grid container spacing={2}>
+          <Grid 
+            container 
+            spacing={0}
+            sx={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'stretch',
+            }}
+          >
             {/* Pickup Location */}
             <Grid item xs={12} md={3}>
               <StationAutocomplete
@@ -218,13 +275,13 @@ export const BookingMask = () => {
 
             {/* Dates */}
             <Grid item xs={12} md={4}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
+              <Grid container spacing={{ xs: 2, sm: 3 }}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Pick-up date"
                     value={formatDateTimeDisplay(pickupDate)}
-                    onClick={() => setDatePickerOpen(true)}
+                    onClick={handleDateFieldClick}
                     InputProps={{
                       readOnly: true,
                       endAdornment: (
@@ -235,12 +292,12 @@ export const BookingMask = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
                     label="Return date"
                     value={formatDateTimeDisplay(returnDate)}
-                    onClick={() => setDatePickerOpen(true)}
+                    onClick={handleDateFieldClick}
                     InputProps={{
                       readOnly: true,
                       endAdornment: (
@@ -266,11 +323,16 @@ export const BookingMask = () => {
                 <Button
                   onClick={() => setDifferentReturnLocation(true)}
                   sx={{ 
-                    height: '56px', // Match height of TextField
+                    height: '56px',
                     width: '100%',
                     justifyContent: 'flex-start',
                     textTransform: 'none',
                     color: 'text.secondary',
+                    border: '1px solid rgba(0, 0, 0, 0.23)',
+                    '&:hover': {
+                      border: '1px solid rgba(0, 0, 0, 0.87)',
+                      backgroundColor: 'transparent',
+                    }
                   }}
                 >
                   + Different return location
@@ -279,12 +341,21 @@ export const BookingMask = () => {
             </Grid>
 
             {/* Search Button */}
-            <Grid item xs={12} md={2}>
+            <Grid 
+              item 
+              xs={12} 
+              md={2}
+              sx={{
+                display: 'flex',
+                alignItems: 'stretch',
+              }}
+            >
               <Button
                 variant="contained"
                 fullWidth
                 sx={{ 
-                  height: '56px', // Match height of TextField
+                  height: '100%',
+                  minHeight: '56px',
                   backgroundColor: '#ff5f00',
                   '&:hover': {
                     backgroundColor: '#cc4c00',
@@ -297,6 +368,22 @@ export const BookingMask = () => {
           </Grid>
         </Stack>
       </Box>
+
+      {/* Warning Snackbar */}
+      <Snackbar 
+        open={showBranchWarning} 
+        autoHideDuration={4000} 
+        onClose={() => setShowBranchWarning(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowBranchWarning(false)} 
+          severity="warning"
+          sx={{ width: '100%' }}
+        >
+          Please select a pick-up location first
+        </Alert>
+      </Snackbar>
 
       <DateRangePicker
         open={datePickerOpen}

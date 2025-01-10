@@ -7,6 +7,8 @@ import {
   Button,
   Grid,
   Typography,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { Station } from '../../types/booking';
 
@@ -114,6 +116,9 @@ export const TimePickerDialog = ({
   station,
   selectedDate,
 }: TimePickerDialogProps) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // Get opening hours based on station data
   const openingHours = getStationOpeningHours(station, selectedDate, type);
   const times = generateTimeSlots(openingHours);
@@ -123,17 +128,44 @@ export const TimePickerDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: { 
+          borderRadius: 2,
+          m: isMobile ? 1 : 2,
+          maxHeight: '90vh',
+        }
+      }}
+    >
+      <DialogTitle sx={{ px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
         Select {type === 'pickup' ? 'pick-up' : 'return'} time for {selectedDate?.toLocaleDateString()}
       </DialogTitle>
-      <DialogContent>
-        <Grid container spacing={1}>
+      <DialogContent sx={{ px: { xs: 1, sm: 2 } }}>
+        <Grid 
+          container 
+          spacing={1}
+          sx={{
+            '& .MuiGrid-item': {
+              width: {
+                xs: '33.33%',
+                sm: '25%'
+              }
+            }
+          }}
+        >
           {times.map(({ hours, minutes }) => (
-            <Grid item xs={3} key={`${hours}-${minutes}`}>
+            <Grid 
+              item 
+              key={`${hours}-${minutes}`}
+            >
               <Button
                 fullWidth
                 variant="outlined"
+                size={isMobile ? "small" : "medium"}
                 onClick={() => {
                   onSelect(hours, minutes);
                   onClose();
@@ -141,6 +173,8 @@ export const TimePickerDialog = ({
                 sx={{
                   borderColor: '#ff5f00',
                   color: '#ff5f00',
+                  minWidth: 0,
+                  px: { xs: 1, sm: 2 },
                   '&:hover': {
                     backgroundColor: 'rgba(255, 95, 0, 0.1)',
                     borderColor: '#ff5f00',

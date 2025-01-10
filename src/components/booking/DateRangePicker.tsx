@@ -6,8 +6,10 @@ import {
   Typography, 
   Button,
   Grid,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
-import { addMonths, format } from 'date-fns';
+import { addMonths, format, getMonth } from 'date-fns';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 
@@ -31,6 +33,9 @@ export const DateRangePicker = ({
   initialPickupDate,
   initialReturnDate,
 }: DateRangePickerProps) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [pickupDate, setPickupDate] = useState<Date | null>(initialPickupDate || null);
   const [returnDate, setReturnDate] = useState<Date | null>(initialReturnDate || null);
@@ -143,32 +148,71 @@ export const DateRangePicker = ({
       open={open}
       onClose={onClose}
       maxWidth="lg"
+      fullWidth
       PaperProps={{
-        sx: { borderRadius: 2 }
+        sx: { 
+          borderRadius: 2,
+          m: isMobile ? 1 : 2,
+          maxHeight: '90vh',
+        }
       }}
     >
       <DialogContent>
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: { xs: 1, sm: 2 } }}>
           <Typography variant="subtitle1" gutterBottom>
             {selectionState === 'pickup' ? 'Select pickup date' : 'Select return date'}
           </Typography>
-          <Grid container spacing={2}>
+          <Grid 
+            container 
+            spacing={2} 
+            sx={{ 
+              flexDirection: { xs: 'column', md: 'row' },
+              '& > .MuiGrid-item': {
+                width: { xs: '100%', md: 'auto' }
+              }
+            }}
+          >
             {[0, 1, 2].map((offset) => (
-              <Grid item xs={4} key={offset}>
+              <Grid 
+                item 
+                xs={12} 
+                md={4} 
+                key={offset}
+                sx={{
+                  display: {
+                    xs: offset === getMonth(currentMonth) ? 'block' : 'none',
+                    md: 'block'
+                  }
+                }}
+              >
                 {renderMonth(offset)}
               </Grid>
             ))}
           </Grid>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mt: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 0 }
+          }}>
+            {isMobile && (
+              <Typography variant="body2" align="center" sx={{ mb: 1 }}>
+                {format(currentMonth, 'MMMM yyyy')}
+              </Typography>
+            )}
             <Button
               onClick={() => setCurrentMonth(prev => addMonths(prev, -1))}
               startIcon={<ChevronLeftIcon />}
+              fullWidth={isMobile}
             >
               Previous
             </Button>
             <Button
               onClick={() => setCurrentMonth(prev => addMonths(prev, 1))}
               endIcon={<ChevronRightIcon />}
+              fullWidth={isMobile}
             >
               Next
             </Button>
