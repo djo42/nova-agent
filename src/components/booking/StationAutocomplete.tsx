@@ -1,4 +1,4 @@
-import { Autocomplete, TextField, CircularProgress, TextFieldProps, SxProps, Box, Typography } from '@mui/material';
+import { Autocomplete, TextField, CircularProgress, TextFieldProps, SxProps, Box, Typography, Divider } from '@mui/material';
 import { useState, useEffect, useMemo, HTMLAttributes } from 'react';
 import { Station } from '../../types/booking';
 import { ApiClient } from '../../services/ApiClient';
@@ -16,49 +16,53 @@ interface StationAutocompleteProps {
   sx?: SxProps;
 }
 
-const sortStations = (stations: Station[], inputValue: string) => {
-  return stations.sort((a, b) => {
-    // Helper function to check if station has a specific subtype
-    const hasSubtype = (station: Station, type: string) => 
-      station.subtypes?.some(subtype => subtype.toLowerCase().includes(type.toLowerCase()));
-
-    // Check for airport subtype
-    const aIsAirport = hasSubtype(a, 'airport');
-    const bIsAirport = hasSubtype(b, 'airport');
-
-    // If searching with a 3-letter code, prioritize matching airports
-    if (inputValue.length === 3) {
-      const searchUpper = inputValue.toUpperCase();
-      const aMatchesCode = a.stationInformation?.iataCode === searchUpper;
-      const bMatchesCode = b.stationInformation?.iataCode === searchUpper;
-
-      if (aMatchesCode && !bMatchesCode) return -1;
-      if (!aMatchesCode && bMatchesCode) return 1;
+const sortAndGroupStations = (stations: Station[]) => {
+  // Group stations by type
+  const groups = stations.reduce((acc, station) => {
+    const subtypes = station.subtypes?.map(s => s.toLowerCase()) || [];
+    
+    if (subtypes.includes('airport')) {
+      acc.airports.push(station);
+    } else if (subtypes.includes('railway') || subtypes.includes('train_station')) {
+      acc.railways.push(station);
+    } else {
+      acc.others.push(station);
     }
+    return acc;
+  }, { airports: [] as Station[], railways: [] as Station[], others: [] as Station[] });
 
-    // Sort airports first
-    if (aIsAirport && !bIsAirport) return -1;
-    if (!aIsAirport && bIsAirport) return 1;
-
-    // Then sort by railway stations
-    const aIsRailway = hasSubtype(a, 'railway') || hasSubtype(a, 'train');
-    const bIsRailway = hasSubtype(b, 'railway') || hasSubtype(b, 'train');
-    if (aIsRailway && !bIsRailway) return -1;
-    if (!aIsRailway && bIsRailway) return 1;
-
-    // Finally sort alphabetically
+  // Sort airports by IATA code first, then alphabetically
+  groups.airports.sort((a, b) => {
+    const aCode = a.stationInformation?.iataCode;
+    const bCode = b.stationInformation?.iataCode;
+    
+    // IATA code stations first
+    if (aCode && !bCode) return -1;
+    if (!aCode && bCode) return 1;
+    if (aCode && bCode) {
+      // If both have IATA codes, sort by code
+      return aCode.localeCompare(bCode);
+    }
+    // If neither has IATA code, sort by title
     return (a.title || '').localeCompare(b.title || '');
   });
+
+  // Sort railways and others alphabetically
+  const sortByTitle = (a: Station, b: Station) => (a.title || '').localeCompare(b.title || '');
+  groups.railways.sort(sortByTitle);
+  groups.others.sort(sortByTitle);
+
+  // Combine all groups in order
+  return [...groups.airports, ...groups.railways, ...groups.others];
 };
 
 const getStationIcon = (station: Station) => {
-  const hasSubtype = (type: string) => 
-    station.subtypes?.some(subtype => subtype.toLowerCase().includes(type.toLowerCase()));
-
-  if (hasSubtype('airport')) {
+  const subtypes = station.subtypes?.map(s => s.toLowerCase()) || [];
+  
+  if (subtypes.includes('airport')) {
     return <FlightIcon sx={{ color: 'text.secondary', mr: 1 }} />;
   }
-  if (hasSubtype('railway') || hasSubtype('train')) {
+  if (subtypes.includes('railway') || subtypes.includes('train_station')) {
     return <TrainIcon sx={{ color: 'text.secondary', mr: 1 }} />;
   }
   return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
@@ -116,14 +120,14 @@ export const StationAutocomplete = ({
 
   const filteredOptions = useMemo(() => {
     if (inputValue.length < 3) return [];
-    return sortStations(
-      options.filter(option => 
-        option.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
-        option.subtitle?.toLowerCase().includes(inputValue.toLowerCase()) ||
-        option.stationInformation?.iataCode?.toLowerCase().includes(inputValue.toLowerCase())
-      ),
-      inputValue
+    
+    const filtered = options.filter(option => 
+      option.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
+      option.subtitle?.toLowerCase().includes(inputValue.toLowerCase()) ||
+      option.stationInformation?.iataCode?.toLowerCase() === inputValue.toLowerCase()
     );
+
+    return sortAndGroupStations(filtered);
   }, [options, inputValue]);
 
   return (
@@ -161,7 +165,7 @@ export const StationAutocomplete = ({
           }}
         />
       )}
-      renderOption={(props: HTMLAttributes<HTMLLIElement>, option: Station) => (
+      renderOption={(props, option) => (
         <li {...props}>
           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             {getStationIcon(option)}
@@ -174,7 +178,8 @@ export const StationAutocomplete = ({
                     sx={{ 
                       ml: 1,
                       color: 'text.secondary',
-                      fontSize: '0.875rem'
+                      fontSize: '0.875rem',
+                      fontWeight: 'medium'
                     }}
                   >
                     ({option.stationInformation.iataCode})
@@ -187,6 +192,30 @@ export const StationAutocomplete = ({
             </Box>
           </Box>
         </li>
+      )}
+      groupBy={(option) => {
+        const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
+        if (subtypes.includes('airport')) return 'Airports';
+        if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
+        return 'Downtown Locations';
+      }}
+      renderGroup={(params) => (
+        <Box key={params.key}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              px: 2,
+              py: 1,
+              backgroundColor: 'grey.100',
+              color: 'text.secondary',
+              fontWeight: 'medium'
+            }}
+          >
+            {params.group}
+          </Typography>
+          {params.children}
+          <Divider />
+        </Box>
       )}
     />
   );

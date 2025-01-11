@@ -10,6 +10,7 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Divider,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -18,6 +19,9 @@ import ListIcon from '@mui/icons-material/List';
 import { Station } from '../../types/booking';
 import { ApiClient } from '../../services/ApiClient';
 import { useGoogleMaps } from '../../contexts/GoogleMapsContext';
+import FlightIcon from '@mui/icons-material/Flight';
+import TrainIcon from '@mui/icons-material/Train';
+import BusinessIcon from '@mui/icons-material/Business';
 
 interface LocationSearchProps {
   onStationSelect: (station: Station | null) => void;
@@ -36,6 +40,58 @@ interface PlaceOption {
 const RADIUS_OPTIONS = [5, 10, 20, 50, 100];
 
 type SearchMode = 'location' | 'station';
+
+const sortAndGroupStations = (stations: Station[]) => {
+  // Group stations by type
+  const groups = stations.reduce((acc, station) => {
+    const subtypes = station.subtypes?.map(s => s.toLowerCase()) || [];
+    
+    if (subtypes.includes('airport')) {
+      acc.airports.push(station);
+    } else if (subtypes.includes('railway') || subtypes.includes('train_station')) {
+      acc.railways.push(station);
+    } else {
+      acc.others.push(station);
+    }
+    return acc;
+  }, { airports: [] as Station[], railways: [] as Station[], others: [] as Station[] });
+
+  // Sort airports by IATA code first, then alphabetically
+  groups.airports.sort((a, b) => {
+    const aCode = a.stationInformation?.iataCode;
+    const bCode = b.stationInformation?.iataCode;
+    
+    // IATA code stations first
+    if (aCode && !bCode) return -1;
+    if (!aCode && bCode) return 1;
+    if (aCode && bCode) {
+      // If both have IATA codes, sort by code
+      return aCode.localeCompare(bCode);
+    }
+    // If neither has IATA code, sort by title
+    return (a.title || '').localeCompare(b.title || '');
+  });
+
+  // Sort railways and others alphabetically
+  const sortByTitle = (a: Station, b: Station) => (a.title || '').localeCompare(b.title || '');
+  groups.railways.sort(sortByTitle);
+  groups.others.sort(sortByTitle);
+
+  // Combine all groups in order
+  return [...groups.airports, ...groups.railways, ...groups.others];
+};
+
+const getStationIcon = (station: Station) => {
+  const subtypes = station.subtypes?.map(s => s.toLowerCase()) || [];
+  
+  if (subtypes.includes('airport')) {
+    return <FlightIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+  }
+  if (subtypes.includes('railway') || subtypes.includes('train_station')) {
+    return <TrainIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+  }
+  return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+};
 
 export const LocationSearch = ({ 
   value,
@@ -67,7 +123,7 @@ export const LocationSearch = ({
             }
           }
         );
-        setAllStations(stations);
+        setAllStations(sortAndGroupStations(stations));
       } catch (error) {
         console.error('Error fetching stations:', error);
       }
@@ -217,6 +273,58 @@ export const LocationSearch = ({
         options={allStations}
         getOptionLabel={(station) => station.title}
         onChange={(_, station) => onChange(station)}
+        groupBy={(option) => {
+          const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
+          if (subtypes.includes('airport')) return 'Airports';
+          if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
+          return 'Downtown Locations';
+        }}
+        renderOption={(props, station) => (
+          <li {...props}>
+            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+              {getStationIcon(station)}
+              <Box>
+                <Typography variant="body1">
+                  {station.title}
+                  {station.stationInformation?.iataCode && (
+                    <Typography 
+                      component="span" 
+                      sx={{ 
+                        ml: 1,
+                        color: 'text.secondary',
+                        fontSize: '0.875rem',
+                        fontWeight: 'medium'
+                      }}
+                    >
+                      ({station.stationInformation.iataCode})
+                    </Typography>
+                  )}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {station.subtitle}
+                </Typography>
+              </Box>
+            </Box>
+          </li>
+        )}
+        renderGroup={(params) => (
+          <Box key={params.key}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                px: 2,
+                py: 1,
+                backgroundColor: 'grey.100',
+                color: 'text.secondary',
+                fontWeight: 'medium'
+              }}
+            >
+              {params.group}
+            </Typography>
+            {params.children}
+            <Divider />
+          </Box>
+        )}
         renderInput={(params) => (
           <TextField
             {...params}
@@ -231,27 +339,6 @@ export const LocationSearch = ({
               ),
             }}
           />
-        )}
-        renderOption={(props, station) => (
-          <li {...props}>
-            <Box>
-              <Typography variant="body1">
-                {station.title}
-                {station.stationInformation?.iataCode && (
-                  <Typography 
-                    component="span" 
-                    color="text.secondary" 
-                    sx={{ ml: 1 }}
-                  >
-                    ({station.stationInformation.iataCode})
-                  </Typography>
-                )}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {station.subtitle}
-              </Typography>
-            </Box>
-          </li>
         )}
       />
     );

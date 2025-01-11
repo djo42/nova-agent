@@ -43,6 +43,17 @@ interface SearchModes {
 const SIXT_ORANGE = '#ff5f00';
 const SIXT_ORANGE_LIGHT = 'rgba(255, 95, 0, 0.1)';
 
+const tabsStyles = {
+  '& .MuiTabs-indicator': {
+    backgroundColor: SIXT_ORANGE,
+  },
+  '& .MuiTab-root': {
+    '&.Mui-selected': {
+      color: SIXT_ORANGE,
+    },
+  },
+};
+
 export const BookingMask = () => {
   const [formData, setFormData] = useState<BookingFormData>({
     pickupCountry: null,
@@ -240,7 +251,7 @@ export const BookingMask = () => {
                     setSearchModes(prev => ({ ...prev, pickup: value }));
                     setFormData(prev => ({ ...prev, pickupStation: null }));
                   }}
-                  sx={{ mb: 2 }}
+                  sx={{ mb: 2, ...tabsStyles }}
                 >
                   <Tab 
                     icon={<ListIcon />} 
@@ -273,7 +284,7 @@ export const BookingMask = () => {
                       setSearchModes(prev => ({ ...prev, return: value }));
                       setFormData(prev => ({ ...prev, returnStation: null }));
                     }}
-                    sx={{ mb: 2 }}
+                    sx={{ mb: 2, ...tabsStyles }}
                   >
                     <Tab 
                       icon={<ListIcon />} 
@@ -369,7 +380,7 @@ export const BookingMask = () => {
                         setSearchModes(prev => ({ ...prev, pickup: value }));
                         setFormData(prev => ({ ...prev, pickupStation: null }));
                       }}
-                      sx={{ mb: 2 }}
+                      sx={{ mb: 2, ...tabsStyles }}
                     >
                       <Tab 
                         icon={<ListIcon />} 
@@ -404,7 +415,7 @@ export const BookingMask = () => {
                           setSearchModes(prev => ({ ...prev, return: value }));
                           setFormData(prev => ({ ...prev, returnStation: null }));
                         }}
-                        sx={{ mb: 2 }}
+                        sx={{ mb: 2, ...tabsStyles }}
                       >
                         <Tab 
                           icon={<ListIcon />} 
