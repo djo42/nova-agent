@@ -51,6 +51,7 @@ export const DateRangePicker = ({
   const [returnDate, setReturnDate] = useState<Date | null>(initialReturnDate || null);
   const [selectionState, setSelectionState] = useState<SelectionState>('pickup');
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
+  const [container, setContainer] = useState<HTMLElement | undefined>(undefined);
 
   useEffect(() => {
     if (open) {
@@ -60,6 +61,10 @@ export const DateRangePicker = ({
       setCurrentMonth(new Date());
     }
   }, [open, initialPickupDate, initialReturnDate]);
+
+  useEffect(() => {
+    setContainer(document.body);
+  }, []);
 
   const handleDateClick = (date: Date) => {
     if (selectionState === 'pickup') {
@@ -101,7 +106,15 @@ export const DateRangePicker = ({
   const renderMonth = (monthOffset: number) => {
     const monthDate = addMonths(currentMonth, monthOffset);
     const { days } = getMonthData(monthDate);
-    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const weekDays = [
+      { key: 'sun', label: 'S' },
+      { key: 'mon', label: 'M' },
+      { key: 'tue', label: 'T' },
+      { key: 'wed', label: 'W' },
+      { key: 'thu', label: 'T' },
+      { key: 'fri', label: 'F' },
+      { key: 'sat', label: 'S' }
+    ];
 
     return (
       <Box>
@@ -109,10 +122,10 @@ export const DateRangePicker = ({
           {format(monthDate, 'MMMM yyyy')}
         </Typography>
         <Grid container spacing={0}>
-          {weekDays.map(day => (
-            <Grid item xs={12/7} key={day}>
+          {weekDays.map(({ key, label }) => (
+            <Grid item xs={12/7} key={`weekday-${key}-${monthOffset}`}>
               <Box sx={{ p: 1, textAlign: 'center' }}>
-                <Typography variant="caption">{day}</Typography>
+                <Typography variant="caption">{label}</Typography>
               </Box>
             </Grid>
           ))}
@@ -159,11 +172,27 @@ export const DateRangePicker = ({
       onClose={onClose}
       maxWidth="lg"
       fullWidth
+      disablePortal
+      container={container}
+      closeAfterTransition
       PaperProps={{
         sx: { 
           borderRadius: 2,
           m: isMobile ? 1 : 2,
           maxHeight: '90vh',
+        },
+        role: 'dialog',
+        'aria-modal': true,
+        tabIndex: -1
+      }}
+      sx={{
+        '& .MuiBackdrop-root': {
+          backgroundColor: 'rgba(0, 0, 0, 0.5)'
+        }
+      }}
+      slotProps={{
+        backdrop: {
+          'aria-hidden': true
         }
       }}
     >

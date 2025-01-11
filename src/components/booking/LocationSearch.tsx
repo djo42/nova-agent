@@ -38,11 +38,12 @@ interface PlaceOption {
   description: string;
 }
 
-const RADIUS_OPTIONS = [5, 10, 20, 50, 100];
+const RADIUS_OPTIONS = [5, 10, 20, 50, 100] as const;
+type RadiusOption = typeof RADIUS_OPTIONS[number];
 
 type SearchMode = 'location' | 'station';
 
-const sortAndGroupStations = (stations: Station[]) => {
+const sortAndGroupStations = (stations: Station[], sortByDistance: boolean = false) => {
   // Group stations by type
   const groups = stations.reduce((acc, station) => {
     const subtypes = station.subtypes?.map(s => s.toLowerCase()) || [];
@@ -57,28 +58,26 @@ const sortAndGroupStations = (stations: Station[]) => {
     return acc;
   }, { airports: [] as Station[], railways: [] as Station[], others: [] as Station[] });
 
-  // Sort airports by IATA code first, then alphabetically
-  groups.airports.sort((a, b) => {
+  // Sort function based on distance or IATA code
+  const sortStations = (a: Station, b: Station) => {
+    if (sortByDistance) {
+      return (a.distance || 0) - (b.distance || 0);
+    }
+    
+    // Original IATA code sorting for station list
     const aCode = a.stationInformation?.iataCode;
     const bCode = b.stationInformation?.iataCode;
-    
-    // IATA code stations first
     if (aCode && !bCode) return -1;
     if (!aCode && bCode) return 1;
-    if (aCode && bCode) {
-      // If both have IATA codes, sort by code
-      return aCode.localeCompare(bCode);
-    }
-    // If neither has IATA code, sort by title
+    if (aCode && bCode) return aCode.localeCompare(bCode);
     return (a.title || '').localeCompare(b.title || '');
-  });
+  };
 
-  // Sort railways and others alphabetically
-  const sortByTitle = (a: Station, b: Station) => (a.title || '').localeCompare(b.title || '');
-  groups.railways.sort(sortByTitle);
-  groups.others.sort(sortByTitle);
+  // Sort each group
+  groups.airports.sort(sortStations);
+  groups.railways.sort(sortStations);
+  groups.others.sort(sortStations);
 
-  // Combine all groups in order
   return [...groups.airports, ...groups.railways, ...groups.others];
 };
 
@@ -103,7 +102,7 @@ export const LocationSearch = ({
   placeholder,
   searchMode,
 }: LocationSearchProps) => {
-  const [radius, setRadius] = useState(10);
+  const [radius, setRadius] = useState<RadiusOption>(10);
   const [loading, setLoading] = useState(false);
   const [stations, setStations] = useState<Station[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -175,15 +174,15 @@ export const LocationSearch = ({
       setShowWarning(false);
       const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
       
-      // Convert coordinates to strings with fixed precision
       const latitude = Number(lat).toFixed(6);
       const longitude = Number(lng).toFixed(6);
       
-      // Build URL with query parameters including country code
+      console.log('Current radius state in search:', radius);
+      
       const url = `/stations/geo?latitude=${latitude}&longitude=${longitude}&maxDistance=${radius}&country=DE`;
 
-      // Log the request details
-      console.log('Making request to:', `${process.env.NEXT_PUBLIC_SIXT_API_URL}${url}`);
+      console.log('Making request with radius:', radius);
+      console.log('Full URL:', `${process.env.NEXT_PUBLIC_SIXT_API_URL}${url}`);
       
       const nearbyStations = await apiClient.request<Station[]>(
         url,
@@ -195,11 +194,12 @@ export const LocationSearch = ({
           }
         }
       );
-      setStations(Array.isArray(nearbyStations) ? sortAndGroupStations(nearbyStations) : []);
+      setStations(Array.isArray(nearbyStations) ? sortAndGroupStations(nearbyStations, true) : []);
     } catch (error) {
       console.error('API Error:', {
         error,
-        requestUrl: `/stations/geo?latitude=${lat}&longitude=${lng}&maxDistance=${radius}&country=DE`
+        requestUrl: `/stations/geo?latitude=${lat}&longitude=${lng}&maxDistance=${radius}&country=DE`,
+        usedRadius: radius
       });
       setStations([]);
       setShowWarning(true);
@@ -228,15 +228,20 @@ export const LocationSearch = ({
   }, [isLoaded, searchNearbyStations]);
 
   // Handle radius change
-  const handleRadiusChange = useCallback((_: React.MouseEvent<HTMLElement>, newRadius: number) => {
-    if (newRadius) {
+  const handleRadiusChange = useCallback((event: React.MouseEvent<HTMLElement>, newRadius: RadiusOption | null) => {
+    if (newRadius !== null) {
+      console.log('Setting new radius:', newRadius);
       setRadius(newRadius);
-      // If we have a selected place, re-search with new radius
-      if (selectedValue?.place_id) {
-        handlePlaceSelect(selectedValue.place_id);
-      }
     }
-  }, [selectedValue, handlePlaceSelect]);
+  }, []);
+
+  // Move this effect after all function definitions
+  useEffect(() => {
+    console.log('Radius changed in effect:', radius);
+    if (selectedValue?.place_id) {
+      handlePlaceSelect(selectedValue.place_id);
+    }
+  }, [radius, selectedValue, handlePlaceSelect]);
 
   const renderSearchInput = () => {
     if (searchMode === 'location') {
@@ -416,6 +421,58 @@ export const LocationSearch = ({
           options={stations}
           getOptionLabel={(station) => station.title}
           onChange={(_, station) => onChange(station)}
+          groupBy={(option) => {
+            const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
+            if (subtypes.includes('airport')) return 'Airports';
+            if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
+            return 'Downtown Locations';
+          }}
+          renderOption={(props, station) => {
+            const { key, ...otherProps } = props;
+            return (
+              <li key={generateUniqueKey('station', station.id)} {...otherProps}>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  {getStationIcon(station)}
+                  <Box>
+                    <Typography variant="body1">
+                      {station.title}
+                      <Typography 
+                        component="span" 
+                        sx={{ 
+                          ml: 1,
+                          color: 'text.secondary',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        ({station.distance.toFixed(1)} km)
+                      </Typography>
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {station.subtitle}
+                    </Typography>
+                  </Box>
+                </Box>
+              </li>
+            );
+          }}
+          renderGroup={(params) => (
+            <Box key={params.key}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  px: 2,
+                  py: 1,
+                  backgroundColor: 'grey.100',
+                  color: 'text.secondary',
+                  fontWeight: 'medium'
+                }}
+              >
+                {params.group}
+              </Typography>
+              {params.children}
+              <Divider />
+            </Box>
+          )}
           renderInput={(params) => (
             <TextField
               {...params}
@@ -424,28 +481,6 @@ export const LocationSearch = ({
               sx={{ mt: 2 }}
             />
           )}
-          renderOption={(props, station) => {
-            const { key, ...otherProps } = props;
-            return (
-              <li key={generateUniqueKey('station', station.id)} {...otherProps}>
-                <Box>
-                  <Typography variant="body1">
-                    {station.title}
-                    <Typography 
-                      component="span" 
-                      color="text.secondary" 
-                      sx={{ ml: 1 }}
-                    >
-                      ({station.distance.toFixed(1)} km)
-                    </Typography>
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {station.subtitle}
-                  </Typography>
-                </Box>
-              </li>
-            );
-          }}
         />
       )}
     </Box>
