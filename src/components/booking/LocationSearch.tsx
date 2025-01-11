@@ -17,12 +17,22 @@ import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import PlaceIcon from '@mui/icons-material/Place';
 import ListIcon from '@mui/icons-material/List';
-import { Station } from '../../types/booking';
 import { ApiClient } from '../../services/ApiClient';
 import { useGoogleMaps } from '../../contexts/GoogleMapsContext';
 import FlightIcon from '@mui/icons-material/Flight';
 import TrainIcon from '@mui/icons-material/Train';
 import BusinessIcon from '@mui/icons-material/Business';
+
+interface Station {
+  id: string;
+  title: string;
+  subtitle: string;
+  subtypes: string[];
+  distance?: number;
+  stationInformation?: {
+    iataCode?: string;
+  };
+}
 
 interface LocationSearchProps {
   onStationSelect: (station: Station | null) => void;
@@ -93,7 +103,8 @@ const getStationIcon = (station: Station) => {
   return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
 };
 
-const generateUniqueKey = (prefix: string, value: string | number) => `${prefix}-${value}-${Math.random().toString(36).substr(2, 9)}`;
+const generateUniqueKey = (prefix: string, value?: string | number) => 
+  `${prefix}-${value || Math.random().toString(36).substr(2, 9)}`;
 
 export const LocationSearch = ({ 
   value,
@@ -123,7 +134,7 @@ export const LocationSearch = ({
           `/stations/country/DE?corporateCustomerNumber=98765`,
           {
             headers: {
-              'Accept-Language': 'en_US'
+              'Accept-Language': 'ko_KR'
             }
           }
         );
@@ -148,7 +159,8 @@ export const LocationSearch = ({
         const service = new google.maps.places.AutocompleteService();
         const response = await service.getPlacePredictions({
           input: inputValue,
-          types: ['geocode', 'establishment']
+          types: ['geocode', 'establishment'],
+          language: 'en',
         });
         
         if (response?.predictions) {
@@ -216,7 +228,10 @@ export const LocationSearch = ({
     try {
       setLoading(true);
       const geocoder = new google.maps.Geocoder();
-      const result = await geocoder.geocode({ placeId });
+      const result = await geocoder.geocode({ 
+        placeId,
+        language: 'en'
+      });
       
       if (result.results[0]?.geometry?.location) {
         const { lat, lng } = result.results[0].geometry.location;
@@ -260,8 +275,10 @@ export const LocationSearch = ({
               setInputValue(newInputValue);
             }}
             options={suggestions}
-            getOptionLabel={(option) => option.description}
-            isOptionEqualToValue={(option, value) => option.place_id === value.place_id}
+            getOptionLabel={(option: string | PlaceOption) => 
+              typeof option === 'string' ? option : option.description}
+            isOptionEqualToValue={(option: string | PlaceOption, value: string | PlaceOption) => 
+              typeof option === 'string' || typeof value === 'string' ? false : option.place_id === value.place_id}
             filterOptions={(x) => x}
             freeSolo
             renderInput={(params) => (
@@ -286,10 +303,10 @@ export const LocationSearch = ({
                 }}
               />
             )}
-            renderOption={(props, option) => {
+            renderOption={(props, option: PlaceOption) => {
               const { key, ...otherProps } = props;
               return (
-                <li key={generateUniqueKey('place', option.place_id)} {...otherProps}>
+                <li key={generateUniqueKey('place', option.place_id!)} {...otherProps}>
                   <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
                   <Typography variant="body2">{option.description}</Typography>
                 </li>
@@ -338,7 +355,7 @@ export const LocationSearch = ({
         renderOption={(props, station) => {
           const { key, ...otherProps } = props;
           return (
-            <li key={generateUniqueKey('station-list', station.id)} {...otherProps}>
+            <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
               <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                 {getStationIcon(station)}
                 <Box>
@@ -430,7 +447,7 @@ export const LocationSearch = ({
           renderOption={(props, station) => {
             const { key, ...otherProps } = props;
             return (
-              <li key={generateUniqueKey('station', station.id)} {...otherProps}>
+              <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
                 <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                   {getStationIcon(station)}
                   <Box>
@@ -444,7 +461,7 @@ export const LocationSearch = ({
                           fontSize: '0.875rem'
                         }}
                       >
-                        ({station.distance.toFixed(1)} km)
+                        ({station.distance?.toFixed(1) ?? 0} km)
                       </Typography>
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
