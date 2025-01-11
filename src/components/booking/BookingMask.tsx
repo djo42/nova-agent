@@ -154,6 +154,8 @@ export const BookingMask = () => {
     setDatePickerOpen(true);
   };
 
+  const today = format(new Date(), 'MMM dd, HH:mm');
+
   return (
     <Paper 
       elevation={3} 
@@ -246,31 +248,68 @@ export const BookingMask = () => {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Location and Date Selection */}
+          {/* Main Form Grid */}
           <Grid 
             container 
             spacing={0}
             sx={{
               width: '100%',
               display: 'flex',
-              alignItems: 'stretch',
+              alignItems: 'flex-start',
             }}
           >
-            {/* Pickup Location */}
+            {/* Left Column: Pickup Location + Optional Return */}
             <Grid item xs={12} md={3}>
-              <StationAutocomplete
-                value={formData.pickupStation}
-                onChange={handleStationChange('pickup')}
-                label="Pick-up location"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                placeholder="Airport, city or address"
-              />
+              <Stack spacing={2}>
+                {/* Pickup Location */}
+                <StationAutocomplete
+                  value={formData.pickupStation}
+                  onChange={handleStationChange('pickup')}
+                  label="Pick-up location"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  placeholder="Airport, city or address"
+                />
+
+                {/* Different Return Location Button - Mobile Only */}
+                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                  {!differentReturnLocation && (
+                    <Button
+                      onClick={() => setDifferentReturnLocation(true)}
+                      sx={{ 
+                        justifyContent: 'flex-start',
+                        textTransform: 'none',
+                        color: 'text.secondary',
+                        p: 0,
+                        minWidth: 'auto',
+                      }}
+                    >
+                      + Add different return location
+                    </Button>
+                  )}
+                </Box>
+
+                {/* Return Location Field - When Active */}
+                {differentReturnLocation && (
+                  <StationAutocomplete
+                    value={formData.returnStation}
+                    onChange={handleStationChange('return')}
+                    label="Return location"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+              </Stack>
             </Grid>
 
             {/* Dates */}
@@ -279,7 +318,8 @@ export const BookingMask = () => {
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Pick-up date"
+                    label="Pick-up date & time"
+                    placeholder={today}
                     value={formatDateTimeDisplay(pickupDate)}
                     onClick={handleDateFieldClick}
                     InputProps={{
@@ -290,12 +330,16 @@ export const BookingMask = () => {
                         </InputAdornment>
                       ),
                     }}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Return date"
+                    label="Return date & time"
+                    placeholder={today}
                     value={formatDateTimeDisplay(returnDate)}
                     onClick={handleDateFieldClick}
                     InputProps={{
@@ -306,38 +350,33 @@ export const BookingMask = () => {
                         </InputAdornment>
                       ),
                     }}
+                    InputLabelProps={{
+                      shrink: true,
+                    }}
                   />
                 </Grid>
               </Grid>
-            </Grid>
 
-            {/* Return Location */}
-            <Grid item xs={12} md={3}>
-              {differentReturnLocation ? (
-                <StationAutocomplete
-                  value={formData.returnStation}
-                  onChange={handleStationChange('return')}
-                  label="Return location"
-                />
-              ) : (
-                <Button
-                  onClick={() => setDifferentReturnLocation(true)}
-                  sx={{ 
-                    height: '56px',
-                    width: '100%',
-                    justifyContent: 'flex-start',
-                    textTransform: 'none',
-                    color: 'text.secondary',
-                    border: '1px solid rgba(0, 0, 0, 0.23)',
-                    '&:hover': {
-                      border: '1px solid rgba(0, 0, 0, 0.87)',
-                      backgroundColor: 'transparent',
-                    }
-                  }}
-                >
-                  + Different return location
-                </Button>
-              )}
+              {/* Different Return Location Button - Desktop Only */}
+              <Box sx={{ 
+                display: { xs: 'none', md: 'block' },
+                mt: 1,
+              }}>
+                {!differentReturnLocation && (
+                  <Button
+                    onClick={() => setDifferentReturnLocation(true)}
+                    sx={{ 
+                      justifyContent: 'flex-start',
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      p: 0,
+                      minWidth: 'auto',
+                    }}
+                  >
+                    + Add different return location
+                  </Button>
+                )}
+              </Box>
             </Grid>
 
             {/* Search Button */}
@@ -347,15 +386,15 @@ export const BookingMask = () => {
               md={2}
               sx={{
                 display: 'flex',
-                alignItems: 'stretch',
+                alignItems: 'flex-start',
+                mt: { xs: 2, md: 0 },
               }}
             >
               <Button
                 variant="contained"
                 fullWidth
                 sx={{ 
-                  height: '100%',
-                  minHeight: '56px',
+                  height: '56px',
                   backgroundColor: '#ff5f00',
                   '&:hover': {
                     backgroundColor: '#cc4c00',

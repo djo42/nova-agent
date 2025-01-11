@@ -2,6 +2,9 @@ import { Autocomplete, TextField, CircularProgress, TextFieldProps, SxProps, Box
 import { useState, useEffect, useMemo, HTMLAttributes } from 'react';
 import { Station } from '../../types/booking';
 import { ApiClient } from '../../services/ApiClient';
+import FlightIcon from '@mui/icons-material/Flight';
+import TrainIcon from '@mui/icons-material/Train';
+import BusinessIcon from '@mui/icons-material/Business';
 
 interface StationAutocompleteProps {
   value: Station | null;
@@ -12,6 +15,54 @@ interface StationAutocompleteProps {
   placeholder?: string;
   sx?: SxProps;
 }
+
+const sortStations = (stations: Station[], inputValue: string) => {
+  return stations.sort((a, b) => {
+    // Helper function to check if station has a specific subtype
+    const hasSubtype = (station: Station, type: string) => 
+      station.subtypes?.some(subtype => subtype.toLowerCase().includes(type.toLowerCase()));
+
+    // Check for airport subtype
+    const aIsAirport = hasSubtype(a, 'airport');
+    const bIsAirport = hasSubtype(b, 'airport');
+
+    // If searching with a 3-letter code, prioritize matching airports
+    if (inputValue.length === 3) {
+      const searchUpper = inputValue.toUpperCase();
+      const aMatchesCode = a.stationInformation?.iataCode === searchUpper;
+      const bMatchesCode = b.stationInformation?.iataCode === searchUpper;
+
+      if (aMatchesCode && !bMatchesCode) return -1;
+      if (!aMatchesCode && bMatchesCode) return 1;
+    }
+
+    // Sort airports first
+    if (aIsAirport && !bIsAirport) return -1;
+    if (!aIsAirport && bIsAirport) return 1;
+
+    // Then sort by railway stations
+    const aIsRailway = hasSubtype(a, 'railway') || hasSubtype(a, 'train');
+    const bIsRailway = hasSubtype(b, 'railway') || hasSubtype(b, 'train');
+    if (aIsRailway && !bIsRailway) return -1;
+    if (!aIsRailway && bIsRailway) return 1;
+
+    // Finally sort alphabetically
+    return (a.title || '').localeCompare(b.title || '');
+  });
+};
+
+const getStationIcon = (station: Station) => {
+  const hasSubtype = (type: string) => 
+    station.subtypes?.some(subtype => subtype.toLowerCase().includes(type.toLowerCase()));
+
+  if (hasSubtype('airport')) {
+    return <FlightIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+  }
+  if (hasSubtype('railway') || hasSubtype('train')) {
+    return <TrainIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+  }
+  return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
+};
 
 export const StationAutocomplete = ({
   value,
@@ -63,53 +114,16 @@ export const StationAutocomplete = ({
     return () => clearTimeout(timer);
   }, [inputValue]);
 
-  const sortStations = (stations: Station[]) => {
-    return stations.sort((a, b) => {
-      // Define station type priorities with more specific types
-      const typePriority: Record<string, number> = {
-        'AIRPORT': 1,
-        'TERMINAL': 1, // Also consider terminals as high priority
-        'RAILWAY': 2,
-        'TRAIN_STATION': 2,
-        'CITY': 3,
-        'DOWNTOWN': 3,
-        'other': 4
-      };
-
-      // Get station types, convert to uppercase for consistency
-      const typeA = (a.stationType || '').toUpperCase();
-      const typeB = (b.stationType || '').toUpperCase();
-
-      // Get priority for each station (default to 'other')
-      const priorityA = typePriority[typeA] || typePriority.other;
-      const priorityB = typePriority[typeB] || typePriority.other;
-
-      // Sort by priority first
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB;
-      }
-
-      // For airports, sort by IATA code presence
-      if (priorityA === typePriority.AIRPORT) {
-        const hasIataA = !!a.stationInformation?.iataCode;
-        const hasIataB = !!b.stationInformation?.iataCode;
-        if (hasIataA !== hasIataB) {
-          return hasIataA ? -1 : 1;
-        }
-      }
-
-      // If same priority, sort alphabetically
-      return (a.title || '').localeCompare(b.title || '');
-    });
-  };
-
   const filteredOptions = useMemo(() => {
     if (inputValue.length < 3) return [];
-    return sortStations(options.filter(option => 
-      option.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
-      option.subtitle?.toLowerCase().includes(inputValue.toLowerCase()) ||
-      option.stationInformation?.iataCode?.toLowerCase().includes(inputValue.toLowerCase())
-    ));
+    return sortStations(
+      options.filter(option => 
+        option.title?.toLowerCase().includes(inputValue.toLowerCase()) ||
+        option.subtitle?.toLowerCase().includes(inputValue.toLowerCase()) ||
+        option.stationInformation?.iataCode?.toLowerCase().includes(inputValue.toLowerCase())
+      ),
+      inputValue
+    );
   }, [options, inputValue]);
 
   return (
@@ -149,11 +163,28 @@ export const StationAutocomplete = ({
       )}
       renderOption={(props: HTMLAttributes<HTMLLIElement>, option: Station) => (
         <li {...props}>
-          <Box>
-            <Typography variant="body1">{option.title}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {option.stationType?.toUpperCase()} - {option.subtitle}
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            {getStationIcon(option)}
+            <Box>
+              <Typography variant="body1">
+                {option.title}
+                {option.stationInformation?.iataCode && (
+                  <Typography 
+                    component="span" 
+                    sx={{ 
+                      ml: 1,
+                      color: 'text.secondary',
+                      fontSize: '0.875rem'
+                    }}
+                  >
+                    ({option.stationInformation.iataCode})
+                  </Typography>
+                )}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {option.subtitle}
+              </Typography>
+            </Box>
           </Box>
         </li>
       )}
