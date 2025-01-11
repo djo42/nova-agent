@@ -145,10 +145,28 @@ export const DateRangePicker = ({
   const getMonthData = (baseDate: Date) => {
     const firstDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
     const days: Date[] = [];
-    const daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+    
+    // Add empty slots for days before the first day of the month
+    const firstDayOfWeek = firstDay.getDay();
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      const prevDate = new Date(firstDay);
+      prevDate.setDate(prevDate.getDate() - (firstDayOfWeek - i));
+      days.push(prevDate);
+    }
 
+    // Add all days of the month
+    const daysInMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
     for (let i = 1; i <= daysInMonth; i++) {
       days.push(new Date(baseDate.getFullYear(), baseDate.getMonth(), i));
+    }
+
+    // Add empty slots for days after the last day of the month
+    const lastDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), daysInMonth);
+    const lastDayOfWeek = lastDay.getDay();
+    for (let i = 1; i < 7 - lastDayOfWeek; i++) {
+      const nextDate = new Date(lastDay);
+      nextDate.setDate(nextDate.getDate() + i);
+      days.push(nextDate);
     }
 
     return { firstDay, days };
@@ -209,6 +227,12 @@ export const DateRangePicker = ({
             const isSelected = isDateSelected(date);
             const isInRange = !isSelected && isDateInRange(date);
             const isHovered = hoveredDate && date.getTime() === hoveredDate.getTime();
+            const isCurrentMonth = date.getMonth() === monthDate.getMonth();
+
+            // Skip rendering dates from other months
+            if (!isCurrentMonth) {
+              return <Grid item xs={12/7} key={date.toISOString()} />;
+            }
 
             return (
               <Grid item xs={12/7} key={date.toISOString()}>
