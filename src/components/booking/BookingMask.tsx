@@ -30,6 +30,9 @@ interface DateRange {
   end: Date | null;
 }
 
+const SIXT_ORANGE = '#ff5f00';
+const SIXT_ORANGE_LIGHT = 'rgba(255, 95, 0, 0.1)';
+
 export const BookingMask = () => {
   const [formData, setFormData] = useState<BookingFormData>({
     pickupCountry: null,
@@ -164,39 +167,23 @@ export const BookingMask = () => {
         overflow: 'hidden',
         backgroundColor: 'white',
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '600px',
         margin: '0 auto',
+        '& .MuiOutlinedInput-root': {
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: SIXT_ORANGE,
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'rgba(0, 0, 0, 0.87)',
+          },
+        },
+        '& .MuiFormLabel-root.Mui-focused': {
+          color: SIXT_ORANGE,
+        },
       }}
     >
-      <Box sx={{ 
-        p: { xs: 2, sm: 3 },
-        '& .MuiGrid-container': {
-          mx: 0,
-          width: '100%',
-          '& > .MuiGrid-item': {
-            px: { xs: 1, sm: 1.5 },
-            mb: { xs: 2, md: 0 },
-            '&:last-child': {
-              mb: { xs: 0 },
-              pr: { xs: 1, sm: 1.5 },
-            },
-            '&:first-of-type': {
-              pl: { xs: 1, sm: 1.5 },
-            }
-          }
-        },
-        '& .MuiTextField-root, & .MuiAutocomplete-root': {
-          '& .MuiInputBase-root': {
-            height: '56px'
-          }
-        }
-      }}>
-        <Stack 
-          spacing={{ xs: 2, sm: 3 }}
-          sx={{
-            width: '100%',
-          }}
-        >
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Stack spacing={2}>
           {/* Vehicle Type Toggle */}
           <ToggleButtonGroup
             value={vehicleType}
@@ -204,207 +191,124 @@ export const BookingMask = () => {
             onChange={(_, value) => value && setVehicleType(value)}
             sx={{ 
               width: '100%',
-              px: { xs: 1, sm: 1.5 },
               '& .MuiToggleButton-root': {
                 flex: 1,
                 py: 1.5,
-                px: { xs: 2, sm: 3 },
               }
             }}
           >
-            <ToggleButton 
-              value="cars"
-              sx={{ 
-                px: 3,
-                py: 1,
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                  },
-                },
-              }}
-            >
+            <ToggleButton value="cars">
               <DirectionsCarIcon sx={{ mr: 1 }} />
               Cars
             </ToggleButton>
-            <ToggleButton 
-              value="trucks"
-              sx={{ 
-                px: 3,
-                py: 1,
-                '&.Mui-selected': {
-                  backgroundColor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: 'primary.dark',
-                  },
-                },
-              }}
-            >
+            <ToggleButton value="trucks">
               <LocalShippingIcon sx={{ mr: 1 }} />
               Trucks
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Main Form Grid */}
-          <Grid 
-            container 
-            spacing={0}
-            sx={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'flex-start',
+          {/* Pickup Location */}
+          <StationAutocomplete
+            value={formData.pickupStation}
+            onChange={handleStationChange('pickup')}
+            label="Pick-up location"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
             }}
-          >
-            {/* Left Column: Pickup Location + Optional Return */}
-            <Grid item xs={12} md={3}>
-              <Stack spacing={2}>
-                {/* Pickup Location */}
-                <StationAutocomplete
-                  value={formData.pickupStation}
-                  onChange={handleStationChange('pickup')}
-                  label="Pick-up location"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                  placeholder="Airport, city or address"
-                />
+            placeholder="Airport, city or address"
+          />
 
-                {/* Different Return Location Button - Mobile Only */}
-                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                  {!differentReturnLocation && (
-                    <Button
-                      onClick={() => setDifferentReturnLocation(true)}
-                      sx={{ 
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        color: 'text.secondary',
-                        p: 0,
-                        minWidth: 'auto',
-                      }}
-                    >
-                      + Add different return location
-                    </Button>
-                  )}
-                </Box>
-
-                {/* Return Location Field - When Active */}
-                {differentReturnLocation && (
-                  <StationAutocomplete
-                    value={formData.returnStation}
-                    onChange={handleStationChange('return')}
-                    label="Return location"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                )}
-              </Stack>
-            </Grid>
-
-            {/* Dates */}
-            <Grid item xs={12} md={4}>
-              <Grid container spacing={{ xs: 2, sm: 3 }}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Pick-up date & time"
-                    placeholder={today}
-                    value={formatDateTimeDisplay(pickupDate)}
-                    onClick={handleDateFieldClick}
-                    InputProps={{
-                      readOnly: true,
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <CalendarTodayIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Return date & time"
-                    placeholder={today}
-                    value={formatDateTimeDisplay(returnDate)}
-                    onClick={handleDateFieldClick}
-                    InputProps={{
-                      readOnly: true,
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <CalendarTodayIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                </Grid>
-              </Grid>
-
-              {/* Different Return Location Button - Desktop Only */}
-              <Box sx={{ 
-                display: { xs: 'none', md: 'block' },
-                mt: 1,
-              }}>
-                {!differentReturnLocation && (
-                  <Button
-                    onClick={() => setDifferentReturnLocation(true)}
-                    sx={{ 
-                      justifyContent: 'flex-start',
-                      textTransform: 'none',
-                      color: 'text.secondary',
-                      p: 0,
-                      minWidth: 'auto',
-                    }}
-                  >
-                    + Add different return location
-                  </Button>
-                )}
-              </Box>
-            </Grid>
-
-            {/* Search Button */}
-            <Grid 
-              item 
-              xs={12} 
-              md={2}
-              sx={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                mt: { xs: 2, md: 0 },
+          {/* Return Location */}
+          {differentReturnLocation ? (
+            <StationAutocomplete
+              value={formData.returnStation}
+              onChange={handleStationChange('return')}
+              label="Return location"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          ) : (
+            <Button
+              onClick={() => setDifferentReturnLocation(true)}
+              sx={{ 
+                height: '56px',
+                width: '100%',
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                color: 'text.secondary',
+                border: '1px solid rgba(0, 0, 0, 0.23)',
+                '&:hover': {
+                  border: '1px solid rgba(0, 0, 0, 0.87)',
+                  backgroundColor: 'transparent',
+                }
               }}
             >
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{ 
-                  height: '56px',
-                  backgroundColor: '#ff5f00',
-                  '&:hover': {
-                    backgroundColor: '#cc4c00',
-                  },
-                }}
-              >
-                Show cars
-              </Button>
-            </Grid>
-          </Grid>
+              + Add different return location
+            </Button>
+          )}
+
+          {/* Dates */}
+          <TextField
+            fullWidth
+            label="Pick-up date & time"
+            placeholder={today}
+            value={formatDateTimeDisplay(pickupDate)}
+            onClick={handleDateFieldClick}
+            InputProps={{
+              readOnly: true,
+              endAdornment: (
+                <InputAdornment position="end">
+                  <CalendarTodayIcon />
+                </InputAdornment>
+              ),
+            }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Return date & time"
+            placeholder={today}
+            value={formatDateTimeDisplay(returnDate)}
+            onClick={handleDateFieldClick}
+            InputProps={{
+              readOnly: true,
+              endAdornment: (
+                <InputAdornment position="end">
+                  <CalendarTodayIcon />
+                </InputAdornment>
+              ),
+            }}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+
+          {/* Search Button */}
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{ 
+              height: '56px',
+              backgroundColor: SIXT_ORANGE,
+              '&:hover': {
+                backgroundColor: '#cc4c00',
+              },
+            }}
+          >
+            Show cars
+          </Button>
         </Stack>
       </Box>
 
