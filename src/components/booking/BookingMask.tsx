@@ -13,6 +13,8 @@ import {
   Snackbar,
   Tabs,
   Tab,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import { StationAutocomplete } from './StationAutocomplete';
 import { Country, Station, BookingFormData } from '../../types/booking';
@@ -184,6 +186,16 @@ export const BookingMask = () => {
 
   const today = format(new Date(), 'MMM dd, HH:mm');
 
+  // Add effect to sync return station with pickup station when checkbox is unchecked
+  useEffect(() => {
+    if (!differentReturnLocation) {
+      setFormData(prev => ({
+        ...prev,
+        returnStation: prev.pickupStation
+      }));
+    }
+  }, [differentReturnLocation, formData.pickupStation]);
+
   return (
     <Paper 
       elevation={3} 
@@ -275,8 +287,27 @@ export const BookingMask = () => {
                 />
               </Box>
 
+              {/* Return Location Checkbox */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={differentReturnLocation}
+                    onChange={(e) => {
+                      setDifferentReturnLocation(e.target.checked);
+                      if (!e.target.checked) {
+                        setSearchModes(prev => ({
+                          ...prev,
+                          return: prev.pickup
+                        }));
+                      }
+                    }}
+                  />
+                }
+                label="Return at different branch"
+              />
+
               {/* Return Location */}
-              {differentReturnLocation ? (
+              {differentReturnLocation && (
                 <Box>
                   <Tabs
                     value={searchModes.return}
@@ -307,10 +338,6 @@ export const BookingMask = () => {
                     placeholder="Airport, city or address"
                   />
                 </Box>
-              ) : (
-                <Button onClick={() => setDifferentReturnLocation(true)} /* ... same styles ... */ >
-                  + Add different return location
-                </Button>
               )}
 
               {/* Date Fields */}
@@ -369,88 +396,110 @@ export const BookingMask = () => {
           {/* Desktop Layout */}
           <Box sx={{ display: { xs: 'none', md: 'block' } }}>
             <Grid container spacing={2}>
-              {/* Location Fields */}
+              {/* Location Fields Container */}
               <Grid container item spacing={2}>
-                {/* Pickup Location */}
-                <Grid item md={6}>
-                  <Box>
-                    <Tabs
-                      value={searchModes.pickup}
-                      onChange={(_, value) => {
-                        setSearchModes(prev => ({ ...prev, pickup: value }));
-                        setFormData(prev => ({ ...prev, pickupStation: null }));
-                      }}
-                      sx={{ mb: 2, ...tabsStyles }}
-                    >
-                      <Tab 
-                        icon={<ListIcon />} 
-                        label="Station List" 
-                        value="station"
-                        iconPosition="start"
+                {/* Return Location Checkbox */}
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={differentReturnLocation}
+                        onChange={(e) => {
+                          setDifferentReturnLocation(e.target.checked);
+                          if (!e.target.checked) {
+                            setSearchModes(prev => ({
+                              ...prev,
+                              return: prev.pickup
+                            }));
+                          }
+                        }}
                       />
-                      <Tab 
-                        icon={<PlaceIcon />} 
-                        label="Location Search" 
-                        value="location"
-                        iconPosition="start"
-                      />
-                    </Tabs>
-                    <LocationSearch
-                      value={formData.pickupStation}
-                      onChange={handleStationChange('pickup')}
-                      label="Pick-up location"
-                      searchMode={searchModes.pickup}
-                      placeholder="Airport, city or address"
-                    />
-                  </Box>
+                    }
+                    label="Return at different branch"
+                  />
                 </Grid>
 
-                {/* Return Location */}
-                <Grid item md={6}>
-                  {differentReturnLocation ? (
-                    <Box>
-                      <Tabs
-                        value={searchModes.return}
-                        onChange={(_, value) => {
-                          setSearchModes(prev => ({ ...prev, return: value }));
-                          setFormData(prev => ({ ...prev, returnStation: null }));
-                        }}
-                        sx={{ mb: 2, ...tabsStyles }}
-                      >
-                        <Tab 
-                          icon={<ListIcon />} 
-                          label="Station List" 
-                          value="station"
-                          iconPosition="start"
+                {/* Branch Fields Container */}
+                <Grid item xs={12}>
+                  <Grid container spacing={2}>
+                    {/* Pickup Location */}
+                    <Grid item xs={differentReturnLocation ? 6 : 12}>
+                      <Box>
+                        <Tabs
+                          value={searchModes.pickup}
+                          onChange={(_, value) => {
+                            setSearchModes(prev => ({ ...prev, pickup: value }));
+                            setFormData(prev => ({ ...prev, pickupStation: null }));
+                          }}
+                          sx={{ mb: 2, ...tabsStyles }}
+                        >
+                          <Tab 
+                            icon={<ListIcon />} 
+                            label="Station List" 
+                            value="station"
+                            iconPosition="start"
+                          />
+                          <Tab 
+                            icon={<PlaceIcon />} 
+                            label="Location Search" 
+                            value="location"
+                            iconPosition="start"
+                          />
+                        </Tabs>
+                        <LocationSearch
+                          value={formData.pickupStation}
+                          onChange={handleStationChange('pickup')}
+                          label="Pick-up location"
+                          searchMode={searchModes.pickup}
+                          placeholder="Airport, city or address"
                         />
-                        <Tab 
-                          icon={<PlaceIcon />} 
-                          label="Location Search" 
-                          value="location"
-                          iconPosition="start"
-                        />
-                      </Tabs>
-                      <LocationSearch
-                        value={formData.returnStation}
-                        onChange={handleStationChange('return')}
-                        label="Return location"
-                        searchMode={searchModes.return}
-                        placeholder="Airport, city or address"
-                      />
-                    </Box>
-                  ) : (
-                    <Button onClick={() => setDifferentReturnLocation(true)} /* ... same styles ... */ >
-                      + Add different return location
-                    </Button>
-                  )}
+                      </Box>
+                    </Grid>
+
+                    {/* Return Location */}
+                    {differentReturnLocation && (
+                      <Grid item xs={6}>
+                        <Box>
+                          <Tabs
+                            value={searchModes.return}
+                            onChange={(_, value) => {
+                              setSearchModes(prev => ({ ...prev, return: value }));
+                              setFormData(prev => ({ ...prev, returnStation: null }));
+                            }}
+                            sx={{ mb: 2, ...tabsStyles }}
+                          >
+                            <Tab 
+                              icon={<ListIcon />} 
+                              label="Station List" 
+                              value="station"
+                              iconPosition="start"
+                            />
+                            <Tab 
+                              icon={<PlaceIcon />} 
+                              label="Location Search" 
+                              value="location"
+                              iconPosition="start"
+                            />
+                          </Tabs>
+                          <LocationSearch
+                            value={formData.returnStation}
+                            onChange={handleStationChange('return')}
+                            label="Return location"
+                            searchMode={searchModes.return}
+                            placeholder="Airport, city or address"
+                          />
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
                 </Grid>
               </Grid>
 
               {/* Date Fields and Search Button */}
               <Grid container item spacing={2}>
-                <Grid item md={8}>
+                <Grid item xs={8}>
                   <Grid container spacing={2}>
-                    <Grid item sm={6}>
+                    <Grid item xs={6}>
                       <TextField
                         fullWidth
                         label="Pick-up date & time"
@@ -470,7 +519,7 @@ export const BookingMask = () => {
                         }}
                       />
                     </Grid>
-                    <Grid item sm={6}>
+                    <Grid item xs={6}>
                       <TextField
                         fullWidth
                         label="Return date & time"
@@ -494,7 +543,7 @@ export const BookingMask = () => {
                 </Grid>
 
                 {/* Search Button */}
-                <Grid item md={4}>
+                <Grid item xs={4}>
                   <Button
                     variant="contained"
                     fullWidth

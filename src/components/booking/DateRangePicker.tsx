@@ -26,6 +26,16 @@ type SelectionState = 'pickup' | 'return' | 'complete';
 const SIXT_ORANGE = '#ff5f00';
 const SIXT_ORANGE_LIGHT = 'rgba(255, 95, 0, 0.2)';
 
+const WEEKDAY_LABELS = {
+  monday: 'Mo',
+  tuesday: 'Tu',
+  wednesday: 'We',
+  thursday: 'Th',
+  friday: 'Fr',
+  saturday: 'Sa',
+  sunday: 'Su'
+};
+
 export const DateRangePicker = ({
   open,
   onClose,

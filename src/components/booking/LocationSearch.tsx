@@ -11,6 +11,7 @@ import {
   Tabs,
   Tab,
   Divider,
+  Alert,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -93,6 +94,8 @@ const getStationIcon = (station: Station) => {
   return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
 };
 
+const generateUniqueKey = (prefix: string, value: string | number) => `${prefix}-${value}-${Math.random().toString(36).substr(2, 9)}`;
+
 export const LocationSearch = ({ 
   value,
   onChange,
@@ -107,6 +110,8 @@ export const LocationSearch = ({
   const [selectedValue, setSelectedValue] = useState<PlaceOption | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceOption[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
+  const [showWarning, setShowWarning] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
   
   const { isLoaded } = useGoogleMaps();
 
@@ -114,12 +119,12 @@ export const LocationSearch = ({
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const apiClient = new ApiClient('/api');
+        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
         const stations = await apiClient.request<Station[]>(
           `/stations/country/DE?corporateCustomerNumber=98765`,
           {
             headers: {
-              'Accept-Language': 'en-US'
+              'Accept-Language': 'en_US'
             }
           }
         );
@@ -144,7 +149,7 @@ export const LocationSearch = ({
         const service = new google.maps.places.AutocompleteService();
         const response = await service.getPlacePredictions({
           input: inputValue,
-          componentRestrictions: { country: 'de' },
+          types: ['geocode', 'establishment']
         });
         
         if (response?.predictions) {
@@ -163,6 +168,48 @@ export const LocationSearch = ({
     return () => clearTimeout(timer);
   }, [inputValue, isLoaded, searchMode]);
 
+  // Handle nearby stations search
+  const searchNearbyStations = useCallback(async (lat: number, lng: number) => {
+    try {
+      setLoading(true);
+      setShowWarning(false);
+      const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
+      
+      // Convert coordinates to strings with fixed precision
+      const latitude = Number(lat).toFixed(6);
+      const longitude = Number(lng).toFixed(6);
+      
+      // Build URL with query parameters including country code
+      const url = `/stations/geo?latitude=${latitude}&longitude=${longitude}&maxDistance=${radius}&country=DE`;
+
+      // Log the request details
+      console.log('Making request to:', `${process.env.NEXT_PUBLIC_SIXT_API_URL}${url}`);
+      
+      const nearbyStations = await apiClient.request<Station[]>(
+        url,
+        {
+          headers: {
+            'accept': 'application/json',
+            'Accept-Language': 'en_US',
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      setStations(Array.isArray(nearbyStations) ? sortAndGroupStations(nearbyStations) : []);
+    } catch (error) {
+      console.error('API Error:', {
+        error,
+        requestUrl: `/stations/geo?latitude=${lat}&longitude=${lng}&maxDistance=${radius}&country=DE`
+      });
+      setStations([]);
+      setShowWarning(true);
+      setWarningMessage('No branches found in this area. Please try a different location or increase the search radius.');
+    } finally {
+      setLoading(false);
+    }
+  }, [radius]);
+
+  // Handle place selection
   const handlePlaceSelect = useCallback(async (placeId: string) => {
     if (!isLoaded) return;
     
@@ -173,25 +220,23 @@ export const LocationSearch = ({
       
       if (result.results[0]?.geometry?.location) {
         const { lat, lng } = result.results[0].geometry.location;
-        
-        const apiClient = new ApiClient('/api');
-        const nearbyStations = await apiClient.request<Station[]>(
-          `/stations/geo?latitude=${lat()}&longitude=${lng()}&maxDistance=${radius}`,
-          {
-            headers: {
-              'Accept-Language': 'en-US'
-            }
-          }
-        );
-        
-        setStations(nearbyStations);
+        await searchNearbyStations(lat(), lng());
       }
     } catch (error) {
-      console.error('Error fetching nearby stations:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error geocoding place:', error);
     }
-  }, [radius, isLoaded]);
+  }, [isLoaded, searchNearbyStations]);
+
+  // Handle radius change
+  const handleRadiusChange = useCallback((_: React.MouseEvent<HTMLElement>, newRadius: number) => {
+    if (newRadius) {
+      setRadius(newRadius);
+      // If we have a selected place, re-search with new radius
+      if (selectedValue?.place_id) {
+        handlePlaceSelect(selectedValue.place_id);
+      }
+    }
+  }, [selectedValue, handlePlaceSelect]);
 
   const renderSearchInput = () => {
     if (searchMode === 'location') {
@@ -236,19 +281,22 @@ export const LocationSearch = ({
                 }}
               />
             )}
-            renderOption={(props, option) => (
-              <li {...props}>
-                <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                <Typography variant="body2">{option.description}</Typography>
-              </li>
-            )}
+            renderOption={(props, option) => {
+              const { key, ...otherProps } = props;
+              return (
+                <li key={generateUniqueKey('place', option.place_id)} {...otherProps}>
+                  <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body2">{option.description}</Typography>
+                </li>
+              );
+            }}
           />
 
           <Box sx={{ mt: 1 }}>
             <ToggleButtonGroup
               value={radius}
               exclusive
-              onChange={(_, value) => value && setRadius(value)}
+              onChange={handleRadiusChange}
               size="small"
               sx={{ 
                 width: '100%',
@@ -258,7 +306,10 @@ export const LocationSearch = ({
               }}
             >
               {RADIUS_OPTIONS.map((option) => (
-                <ToggleButton key={option} value={option}>
+                <ToggleButton 
+                  key={`radius-${option}`}
+                  value={option}
+                >
                   {option} km
                 </ToggleButton>
               ))}
@@ -279,34 +330,37 @@ export const LocationSearch = ({
           if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
           return 'Downtown Locations';
         }}
-        renderOption={(props, station) => (
-          <li {...props}>
-            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-              {getStationIcon(station)}
-              <Box>
-                <Typography variant="body1">
-                  {station.title}
-                  {station.stationInformation?.iataCode && (
-                    <Typography 
-                      component="span" 
-                      sx={{ 
-                        ml: 1,
-                        color: 'text.secondary',
-                        fontSize: '0.875rem',
-                        fontWeight: 'medium'
-                      }}
-                    >
-                      ({station.stationInformation.iataCode})
-                    </Typography>
-                  )}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {station.subtitle}
-                </Typography>
+        renderOption={(props, station) => {
+          const { key, ...otherProps } = props;
+          return (
+            <li key={generateUniqueKey('station-list', station.id)} {...otherProps}>
+              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                {getStationIcon(station)}
+                <Box>
+                  <Typography variant="body1">
+                    {station.title}
+                    {station.stationInformation?.iataCode && (
+                      <Typography 
+                        component="span" 
+                        sx={{ 
+                          ml: 1,
+                          color: 'text.secondary',
+                          fontSize: '0.875rem',
+                          fontWeight: 'medium'
+                        }}
+                      >
+                        ({station.stationInformation.iataCode})
+                      </Typography>
+                    )}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {station.subtitle}
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          </li>
-        )}
+            </li>
+          );
+        }}
         renderGroup={(params) => (
           <Box key={params.key}>
             <Typography
@@ -346,6 +400,15 @@ export const LocationSearch = ({
 
   return (
     <Box>
+      {showWarning && (
+        <Alert 
+          severity="warning" 
+          sx={{ mb: 2 }}
+          onClose={() => setShowWarning(false)}
+        >
+          {warningMessage}
+        </Alert>
+      )}
       {renderSearchInput()}
 
       {searchMode === 'location' && stations.length > 0 && (
@@ -361,25 +424,28 @@ export const LocationSearch = ({
               sx={{ mt: 2 }}
             />
           )}
-          renderOption={(props, station) => (
-            <li {...props}>
-              <Box>
-                <Typography variant="body1">
-                  {station.title}
-                  <Typography 
-                    component="span" 
-                    color="text.secondary" 
-                    sx={{ ml: 1 }}
-                  >
-                    ({station.distance.toFixed(1)} km)
+          renderOption={(props, station) => {
+            const { key, ...otherProps } = props;
+            return (
+              <li key={generateUniqueKey('station', station.id)} {...otherProps}>
+                <Box>
+                  <Typography variant="body1">
+                    {station.title}
+                    <Typography 
+                      component="span" 
+                      color="text.secondary" 
+                      sx={{ ml: 1 }}
+                    >
+                      ({station.distance.toFixed(1)} km)
+                    </Typography>
                   </Typography>
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {station.subtitle}
-                </Typography>
-              </Box>
-            </li>
-          )}
+                  <Typography variant="caption" color="text.secondary">
+                    {station.subtitle}
+                  </Typography>
+                </Box>
+              </li>
+            );
+          }}
         />
       )}
     </Box>

@@ -1,9 +1,6 @@
-import dotenv from 'dotenv';
 import { env } from './config/env';
 import { AuthService } from './services/AuthService';
 import { ApiClient } from './services/ApiClient';
-
-dotenv.config();
 
 const authConfig = {
   clientId: process.env.CLIENT_ID!,
@@ -12,10 +9,7 @@ const authConfig = {
 };
 
 const authService = new AuthService(authConfig);
-const apiClient = new ApiClient(
-  authService,
-  env.api.baseUrl[authConfig.environment]
-);
+const apiClient = new ApiClient('/api');
 
 // Example usage
 async function main() {
