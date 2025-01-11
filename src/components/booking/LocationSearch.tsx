@@ -12,6 +12,10 @@ import {
   Tab,
   Divider,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -52,6 +56,11 @@ const RADIUS_OPTIONS = [5, 10, 20, 50, 100] as const;
 type RadiusOption = typeof RADIUS_OPTIONS[number];
 
 type SearchMode = 'location' | 'station';
+
+interface Country {
+  name: string;
+  iso2code: string;
+}
 
 const sortAndGroupStations = (stations: Station[], sortByDistance: boolean = false) => {
   // Group stations by type
@@ -122,6 +131,8 @@ export const LocationSearch = ({
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showWarning, setShowWarning] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
   
   const { isLoaded } = useGoogleMaps();
 
@@ -258,6 +269,50 @@ export const LocationSearch = ({
     }
   }, [radius, selectedValue, handlePlaceSelect]);
 
+  // Add countries fetch effect
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const apiClient = new ApiClient('/api');
+        const data = await apiClient.request<Country[]>('/stations/countries', {
+          headers: {
+            'Accept-Language': 'en-US'
+          }
+        });
+        setCountries(data);
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+    fetchCountries();
+  }, []);
+
+  // Update station fetch effect to use selected country
+  useEffect(() => {
+    const fetchStations = async () => {
+      if (!selectedCountry) return;
+      
+      try {
+        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
+        const stations = await apiClient.request<Station[]>(
+          `/stations/country/${selectedCountry.iso2code}`,
+          {
+            headers: {
+              'Accept-Language': 'en-US'
+            }
+          }
+        );
+        setAllStations(sortAndGroupStations(stations));
+      } catch (error) {
+        console.error('Error fetching stations:', error);
+      }
+    };
+
+    if (searchMode === 'station') {
+      fetchStations();
+    }
+  }, [selectedCountry, searchMode]);
+
   const renderSearchInput = () => {
     if (searchMode === 'location') {
       return (
@@ -342,81 +397,102 @@ export const LocationSearch = ({
     }
 
     return (
-      <Autocomplete
-        options={allStations}
-        getOptionLabel={(station) => station.title}
-        onChange={(_, station) => onChange(station)}
-        groupBy={(option) => {
-          const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
-          if (subtypes.includes('airport')) return 'Airports';
-          if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
-          return 'Downtown Locations';
-        }}
-        renderOption={(props, station) => {
-          const { key, ...otherProps } = props;
-          return (
-            <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
-              <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                {getStationIcon(station)}
-                <Box>
-                  <Typography variant="body1">
-                    {station.title}
-                    {station.stationInformation?.iataCode && (
-                      <Typography 
-                        component="span" 
-                        sx={{ 
-                          ml: 1,
-                          color: 'text.secondary',
-                          fontSize: '0.875rem',
-                          fontWeight: 'medium'
-                        }}
-                      >
-                        ({station.stationInformation.iataCode})
-                      </Typography>
-                    )}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {station.subtitle}
-                  </Typography>
-                </Box>
-              </Box>
-            </li>
-          );
-        }}
-        renderGroup={(params) => (
-          <Box key={params.key}>
-            <Typography
-              variant="subtitle2"
-              sx={{
-                px: 2,
-                py: 1,
-                backgroundColor: 'grey.100',
-                color: 'text.secondary',
-                fontWeight: 'medium'
-              }}
-            >
-              {params.group}
-            </Typography>
-            {params.children}
-            <Divider />
-          </Box>
-        )}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label={label}
-            placeholder="Search stations directly"
-            InputProps={{
-              ...params.InputProps,
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
+      <>
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Select Country</InputLabel>
+          <Select
+            value={selectedCountry?.iso2code || ''}
+            onChange={(e) => {
+              const country = countries.find(c => c.iso2code === e.target.value);
+              setSelectedCountry(country || null);
             }}
-          />
-        )}
-      />
+            label="Select Country"
+          >
+            {countries.map((country) => (
+              <MenuItem key={country.iso2code} value={country.iso2code}>
+                {country.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Autocomplete
+          options={allStations}
+          getOptionLabel={(station) => station.title}
+          onChange={(_, station) => onChange(station)}
+          disabled={!selectedCountry}
+          groupBy={(option) => {
+            const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
+            if (subtypes.includes('airport')) return 'Airports';
+            if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
+            return 'Downtown Locations';
+          }}
+          renderOption={(props, station) => {
+            const { key, ...otherProps } = props;
+            return (
+              <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  {getStationIcon(station)}
+                  <Box>
+                    <Typography variant="body1">
+                      {station.title}
+                      {station.stationInformation?.iataCode && (
+                        <Typography 
+                          component="span" 
+                          sx={{ 
+                            ml: 1,
+                            color: 'text.secondary',
+                            fontSize: '0.875rem',
+                            fontWeight: 'medium'
+                          }}
+                        >
+                          ({station.stationInformation.iataCode})
+                        </Typography>
+                      )}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {station.subtitle}
+                    </Typography>
+                  </Box>
+                </Box>
+              </li>
+            );
+          }}
+          renderGroup={(params) => (
+            <Box key={params.key}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  px: 2,
+                  py: 1,
+                  backgroundColor: 'grey.100',
+                  color: 'text.secondary',
+                  fontWeight: 'medium'
+                }}
+              >
+                {params.group}
+              </Typography>
+              {params.children}
+              <Divider />
+            </Box>
+          )}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label={label}
+              placeholder="Search stations directly"
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+        />
+      </>
     );
   };
 
