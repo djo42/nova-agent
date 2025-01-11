@@ -8,6 +8,8 @@ import {
 } from '@mui/material';
 import { ApiClient } from '../services/ApiClient';
 
+const SIXT_ORANGE = '#ff5f00';
+
 export const AuthTester = () => {
   const [token, setToken] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -52,6 +54,15 @@ export const AuthTester = () => {
           variant="contained"
           onClick={handleGetToken}
           disabled={loading}
+          sx={{ 
+            bgcolor: SIXT_ORANGE,
+            '&:hover': {
+              bgcolor: '#e65500'
+            },
+            '&:disabled': {
+              bgcolor: '#ffd1b3'
+            }
+          }}
         >
           {loading ? 'Getting Token...' : 'Get Token'}
         </Button>
@@ -60,7 +71,14 @@ export const AuthTester = () => {
           variant="outlined"
           onClick={handleLogout}
           disabled={!token || loading}
-          color="error"
+          sx={{ 
+            color: SIXT_ORANGE,
+            borderColor: SIXT_ORANGE,
+            '&:hover': {
+              borderColor: '#e65500',
+              color: '#e65500'
+            }
+          }}
         >
           Logout
         </Button>

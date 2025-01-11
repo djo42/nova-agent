@@ -30,19 +30,15 @@ class GoogleMapsLoader {
           return;
         }
 
-        // Create callback
-        const callback = 'googleMapsCallback';
-        window[callback] = () => {
-          this.isLoaded = true;
-          resolve();
-          delete window[callback];
-        };
-
         // Load script
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&callback=${callback}`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
         script.async = true;
         script.defer = true;
+        script.onload = () => {
+          this.isLoaded = true;
+          resolve();
+        };
         script.onerror = (error) => reject(error);
         document.head.appendChild(script);
       } catch (error) {

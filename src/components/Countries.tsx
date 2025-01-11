@@ -19,6 +19,8 @@ interface Country {
   iso2code: string;
 }
 
+const SIXT_ORANGE = '#ff5f00';
+
 export const Countries = () => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [error, setError] = useState<string>('');
@@ -68,6 +70,13 @@ export const Countries = () => {
           sx={{
             borderRadius: 2,
             textTransform: 'none',
+            bgcolor: SIXT_ORANGE,
+            '&:hover': {
+              bgcolor: '#e65500'
+            },
+            '&:disabled': {
+              bgcolor: '#ffd1b3'
+            }
           }}
         >
           {loading ? 'Refreshing...' : 'Refresh'}
