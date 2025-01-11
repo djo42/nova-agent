@@ -173,12 +173,20 @@ export const BookingMask = () => {
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: SIXT_ORANGE,
           },
-          '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'rgba(0, 0, 0, 0.87)',
+          '&:hover': {
+            '& ~ .MuiFormLabel-root': {
+              color: SIXT_ORANGE,
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: SIXT_ORANGE,
+            },
           },
         },
         '& .MuiFormLabel-root.Mui-focused': {
           color: SIXT_ORANGE,
+        },
+        '& .MuiButton-root:not(.MuiButton-contained):hover': {
+          borderColor: SIXT_ORANGE,
         },
       }}
     >
