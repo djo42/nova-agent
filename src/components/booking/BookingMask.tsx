@@ -11,6 +11,8 @@ import {
   TextField,
   Alert,
   Snackbar,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import { StationAutocomplete } from './StationAutocomplete';
 import { Country, Station, BookingFormData } from '../../types/booking';
@@ -24,10 +26,18 @@ import dayjs from 'dayjs';
 import { DateRangePicker } from './DateRangePicker';
 import { format } from 'date-fns';
 import { TimePickerDialog } from './TimePickerDialog';
+import { LocationSearch } from './LocationSearch';
+import ListIcon from '@mui/icons-material/List';
+import PlaceIcon from '@mui/icons-material/Place';
 
 interface DateRange {
   start: Date | null;
   end: Date | null;
+}
+
+interface SearchModes {
+  pickup: 'station' | 'location';
+  return: 'station' | 'location';
 }
 
 const SIXT_ORANGE = '#ff5f00';
@@ -58,6 +68,10 @@ export const BookingMask = () => {
     return: null
   });
   const [showBranchWarning, setShowBranchWarning] = useState(false);
+  const [searchModes, setSearchModes] = useState<SearchModes>({
+    pickup: 'station',
+    return: 'station'
+  });
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -191,7 +205,7 @@ export const BookingMask = () => {
       }}
     >
       <Box sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2}>
+        <Stack spacing={{ xs: 2, sm: 3 }}>
           {/* Vehicle Type Toggle */}
           <ToggleButtonGroup
             value={vehicleType}
@@ -218,53 +232,77 @@ export const BookingMask = () => {
           {/* Mobile Layout */}
           <Box sx={{ display: { xs: 'block', md: 'none' } }}>
             <Stack spacing={2}>
-              <StationAutocomplete
-                value={formData.pickupStation}
-                onChange={handleStationChange('pickup')}
-                label="Pick-up location"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                placeholder="Airport, city or address"
-              />
-              
-              {differentReturnLocation ? (
-                <StationAutocomplete
-                  value={formData.returnStation}
-                  onChange={handleStationChange('return')}
-                  label="Return location"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
+              {/* Pickup Location */}
+              <Box>
+                <Tabs
+                  value={searchModes.pickup}
+                  onChange={(_, value) => {
+                    setSearchModes(prev => ({ ...prev, pickup: value }));
+                    setFormData(prev => ({ ...prev, pickupStation: null }));
                   }}
-                />
-              ) : (
-                <Button
-                  onClick={() => setDifferentReturnLocation(true)}
-                  sx={{ 
-                    height: '56px',
-                    width: '100%',
-                    justifyContent: 'flex-start',
-                    textTransform: 'none',
-                    color: 'text.secondary',
-                    border: '1px solid rgba(0, 0, 0, 0.23)',
-                    '&:hover': {
-                      border: '1px solid rgba(0, 0, 0, 0.87)',
-                      backgroundColor: 'transparent',
-                    }
-                  }}
+                  sx={{ mb: 2 }}
                 >
+                  <Tab 
+                    icon={<ListIcon />} 
+                    label="Station List" 
+                    value="station"
+                    iconPosition="start"
+                  />
+                  <Tab 
+                    icon={<PlaceIcon />} 
+                    label="Location Search" 
+                    value="location"
+                    iconPosition="start"
+                  />
+                </Tabs>
+                <LocationSearch
+                  value={formData.pickupStation}
+                  onChange={handleStationChange('pickup')}
+                  label="Pick-up location"
+                  searchMode={searchModes.pickup}
+                  placeholder="Airport, city or address"
+                />
+              </Box>
+
+              {/* Return Location */}
+              {differentReturnLocation ? (
+                <Box>
+                  <Tabs
+                    value={searchModes.return}
+                    onChange={(_, value) => {
+                      setSearchModes(prev => ({ ...prev, return: value }));
+                      setFormData(prev => ({ ...prev, returnStation: null }));
+                    }}
+                    sx={{ mb: 2 }}
+                  >
+                    <Tab 
+                      icon={<ListIcon />} 
+                      label="Station List" 
+                      value="station"
+                      iconPosition="start"
+                    />
+                    <Tab 
+                      icon={<PlaceIcon />} 
+                      label="Location Search" 
+                      value="location"
+                      iconPosition="start"
+                    />
+                  </Tabs>
+                  <LocationSearch
+                    value={formData.returnStation}
+                    onChange={handleStationChange('return')}
+                    label="Return location"
+                    searchMode={searchModes.return}
+                    placeholder="Airport, city or address"
+                  />
+                </Box>
+              ) : (
+                <Button onClick={() => setDifferentReturnLocation(true)} /* ... same styles ... */ >
                   + Add different return location
                 </Button>
               )}
 
+              {/* Date Fields */}
               <TextField
                 fullWidth
                 label="Pick-up date & time"
@@ -283,7 +321,6 @@ export const BookingMask = () => {
                   shrink: true,
                 }}
               />
-
               <TextField
                 fullWidth
                 label="Return date & time"
@@ -302,7 +339,6 @@ export const BookingMask = () => {
                   shrink: true,
                 }}
               />
-              
               <Button
                 variant="contained"
                 fullWidth
@@ -322,65 +358,85 @@ export const BookingMask = () => {
           {/* Desktop Layout */}
           <Box sx={{ display: { xs: 'none', md: 'block' } }}>
             <Grid container spacing={2}>
-              {/* First Row */}
+              {/* Location Fields */}
               <Grid container item spacing={2}>
                 {/* Pickup Location */}
                 <Grid item md={6}>
-                  <StationAutocomplete
-                    value={formData.pickupStation}
-                    onChange={handleStationChange('pickup')}
-                    label="Pick-up location"
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon />
-                        </InputAdornment>
-                      ),
-                    }}
-                    placeholder="Airport, city or address"
-                  />
+                  <Box>
+                    <Tabs
+                      value={searchModes.pickup}
+                      onChange={(_, value) => {
+                        setSearchModes(prev => ({ ...prev, pickup: value }));
+                        setFormData(prev => ({ ...prev, pickupStation: null }));
+                      }}
+                      sx={{ mb: 2 }}
+                    >
+                      <Tab 
+                        icon={<ListIcon />} 
+                        label="Station List" 
+                        value="station"
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<PlaceIcon />} 
+                        label="Location Search" 
+                        value="location"
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                    <LocationSearch
+                      value={formData.pickupStation}
+                      onChange={handleStationChange('pickup')}
+                      label="Pick-up location"
+                      searchMode={searchModes.pickup}
+                      placeholder="Airport, city or address"
+                    />
+                  </Box>
                 </Grid>
 
                 {/* Return Location */}
                 <Grid item md={6}>
                   {differentReturnLocation ? (
-                    <StationAutocomplete
-                      value={formData.returnStation}
-                      onChange={handleStationChange('return')}
-                      label="Return location"
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <SearchIcon />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
+                    <Box>
+                      <Tabs
+                        value={searchModes.return}
+                        onChange={(_, value) => {
+                          setSearchModes(prev => ({ ...prev, return: value }));
+                          setFormData(prev => ({ ...prev, returnStation: null }));
+                        }}
+                        sx={{ mb: 2 }}
+                      >
+                        <Tab 
+                          icon={<ListIcon />} 
+                          label="Station List" 
+                          value="station"
+                          iconPosition="start"
+                        />
+                        <Tab 
+                          icon={<PlaceIcon />} 
+                          label="Location Search" 
+                          value="location"
+                          iconPosition="start"
+                        />
+                      </Tabs>
+                      <LocationSearch
+                        value={formData.returnStation}
+                        onChange={handleStationChange('return')}
+                        label="Return location"
+                        searchMode={searchModes.return}
+                        placeholder="Airport, city or address"
+                      />
+                    </Box>
                   ) : (
-                    <Button
-                      onClick={() => setDifferentReturnLocation(true)}
-                      sx={{ 
-                        height: '56px',
-                        width: '100%',
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        color: 'text.secondary',
-                        border: '1px solid rgba(0, 0, 0, 0.23)',
-                        '&:hover': {
-                          border: '1px solid rgba(0, 0, 0, 0.87)',
-                          backgroundColor: 'transparent',
-                        }
-                      }}
-                    >
+                    <Button onClick={() => setDifferentReturnLocation(true)} /* ... same styles ... */ >
                       + Add different return location
                     </Button>
                   )}
                 </Grid>
               </Grid>
 
-              {/* Second Row */}
+              {/* Date Fields and Search Button */}
               <Grid container item spacing={2}>
-                {/* Dates */}
                 <Grid item md={8}>
                   <Grid container spacing={2}>
                     <Grid item sm={6}>

@@ -20,12 +20,14 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "date-fns": "^2.30.0",
-    "react-date-range": "^1.4.0"
+    "react-date-range": "^1.4.0",
+    "@types/google.maps": "^3.55.3"
   },
   "devDependencies": {
     "@types/node": "22.10.5",
     "@types/react": "19.0.4",
     "typescript": "5.7.3",
-    "@types/react-date-range": "^1.4.9"
+    "@types/react-date-range": "^1.4.9",
+    "@types/googlemaps": "^3.43.3"
   }
 }

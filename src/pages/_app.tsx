@@ -2,6 +2,7 @@ import { AppProps } from 'next/app';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { GoogleMapsProvider } from '../contexts/GoogleMapsContext';
 
 const theme = createTheme({
   palette: {
@@ -34,12 +35,14 @@ const theme = createTheme({
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <ThemeProvider theme={theme}>
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <CssBaseline />
-        <Component {...pageProps} />
-      </LocalizationProvider>
-    </ThemeProvider>
+    <GoogleMapsProvider>
+      <ThemeProvider theme={theme}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <CssBaseline />
+          <Component {...pageProps} />
+        </LocalizationProvider>
+      </ThemeProvider>
+    </GoogleMapsProvider>
   );
 }
 
