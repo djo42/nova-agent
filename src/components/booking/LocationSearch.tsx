@@ -17,6 +17,7 @@ import {
   Select,
   MenuItem,
   Modal,
+  Grid,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -339,281 +340,272 @@ export const LocationSearch = ({
   }, [selectedCountry, searchMode]);
 
   const renderSearchInput = () => {
-    if (searchMode === 'location') {
-      return (
-        <>
-          <Autocomplete
-            value={selectedValue}
-            onChange={(_, newValue: PlaceOption | null) => {
-              setSelectedValue(newValue);
-              if (newValue?.place_id) {
-                handlePlaceSelect(newValue.place_id);
-              }
-            }}
-            inputValue={inputValue}
-            onInputChange={(_, newInputValue) => {
-              setInputValue(newInputValue);
-            }}
-            options={suggestions}
-            getOptionLabel={(option: string | PlaceOption) => 
-              typeof option === 'string' ? option : option.description}
-            isOptionEqualToValue={(option: string | PlaceOption, value: string | PlaceOption) => 
-              typeof option === 'string' || typeof value === 'string' ? false : option.place_id === value.place_id}
-            filterOptions={(x) => x}
-            freeSolo
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Address search"
-                placeholder={isLoaded ? "Enter location to find nearby stations" : 'Loading...'}
-                disabled={!isLoaded}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PlaceIcon />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <>
-                      {(loading || !isLoaded) && <CircularProgress color="inherit" size={20} />}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-            renderOption={(props, option: PlaceOption) => {
-              const { key, ...otherProps } = props;
-              return (
-                <li key={generateUniqueKey('place', option.place_id!)} {...otherProps}>
-                  <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                  <Typography variant="body2">{option.description}</Typography>
-                </li>
-              );
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && suggestions.length > 0) {
-                const firstSuggestion = suggestions[0];
-                console.log('Selected first suggestion:', firstSuggestion);
-                setSelectedValue(firstSuggestion);
-                if (firstSuggestion?.place_id) {
-                  handlePlaceSelect(firstSuggestion.place_id);
-                }
-              }
-            }}
-          />
-
-          <Box sx={{ mt: 1 }}>
-            <ToggleButtonGroup
-              value={radius}
-              exclusive
-              onChange={handleRadiusChange}
-              size="small"
-              sx={{ 
-                width: '100%',
-                '& .MuiToggleButton-root': {
-                  flex: 1,
+    return (
+      <Grid container spacing={2}>
+        {/* Row 1: Search Field / Country Picker */}
+        <Grid item xs={12}>
+          {searchMode === 'location' ? (
+            <Autocomplete
+              value={selectedValue}
+              onChange={(_, newValue: PlaceOption | null) => {
+                setSelectedValue(newValue);
+                if (newValue?.place_id) {
+                  handlePlaceSelect(newValue.place_id);
                 }
               }}
-            >
-              {RADIUS_OPTIONS.map((option) => (
-                <ToggleButton 
-                  key={`radius-${option}`}
-                  value={option}
-                >
-                  {option} km
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-        </>
-      );
-    }
-
-    return (
-      <>
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Select Country</InputLabel>
-          <Select
-            value={selectedCountry?.iso2code || ''}
-            onChange={(e) => {
-              const country = countries.find(c => c.iso2code === e.target.value);
-              setSelectedCountry(country || null);
-            }}
-            label="Select Country"
-          >
-            {countries.map((country) => (
-              <MenuItem key={country.iso2code} value={country.iso2code}>
-                {country.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Autocomplete
-          options={allStations}
-          getOptionLabel={(station) => station.title}
-          onChange={(_, station) => onChange(station)}
-          disabled={!selectedCountry}
-          groupBy={(option) => {
-            const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
-            if (subtypes.includes('airport')) return 'Airports';
-            if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
-            return 'Downtown Locations';
-          }}
-          renderOption={(props, station) => {
-            const { key, ...otherProps } = props;
-            return (
-              <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                  {getStationIcon(station)}
-                  <Box>
-                    <Typography variant="body1">
-                      {station.title}
-                      {station.stationInformation?.iataCode && (
-                        <Typography 
-                          component="span" 
-                          sx={{ 
-                            ml: 1,
-                            color: 'text.secondary',
-                            fontSize: '0.875rem',
-                            fontWeight: 'medium'
-                          }}
-                        >
-                          ({station.stationInformation.iataCode})
-                        </Typography>
-                      )}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {station.subtitle}
-                    </Typography>
-                  </Box>
-                </Box>
-              </li>
-            );
-          }}
-          renderGroup={(params) => (
-            <Box key={params.key}>
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  px: 2,
-                  py: 1,
-                  backgroundColor: 'grey.100',
-                  color: 'text.secondary',
-                  fontWeight: 'medium'
-                }}
-              >
-                {params.group}
-              </Typography>
-              {params.children}
-              <Divider />
-            </Box>
-          )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label={label}
-              placeholder="Search stations directly"
-              InputProps={{
-                ...params.InputProps,
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
+              inputValue={inputValue}
+              onInputChange={(_, newInputValue) => {
+                setInputValue(newInputValue);
+              }}
+              options={suggestions}
+              getOptionLabel={(option: string | PlaceOption) => 
+                typeof option === 'string' ? option : option.description}
+              isOptionEqualToValue={(option: string | PlaceOption, value: string | PlaceOption) => 
+                typeof option === 'string' || typeof value === 'string' ? false : option.place_id === value.place_id}
+              filterOptions={(x) => x}
+              freeSolo
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Address search"
+                  placeholder={isLoaded ? "Enter location to find nearby stations" : 'Loading...'}
+                  disabled={!isLoaded}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PlaceIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, option: PlaceOption) => {
+                const { key, ...otherProps } = props;
+                return (
+                  <li key={generateUniqueKey('place', option.place_id!)} {...otherProps}>
+                    <LocationOnIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Typography variant="body2">{option.description}</Typography>
+                  </li>
+                );
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && suggestions.length > 0) {
+                  const firstSuggestion = suggestions[0];
+                  console.log('Selected first suggestion:', firstSuggestion);
+                  setSelectedValue(firstSuggestion);
+                  if (firstSuggestion?.place_id) {
+                    handlePlaceSelect(firstSuggestion.place_id);
+                  }
+                }
               }}
             />
+          ) : (
+            <FormControl fullWidth>
+              <InputLabel>Country</InputLabel>
+              <Select
+                value={selectedCountry?.iso2code || ''}
+                onChange={(e) => {
+                  const country = countries.find(c => c.iso2code === e.target.value);
+                  setSelectedCountry(country || null);
+                }}
+                label="Country"
+              >
+                {countries.map((country) => (
+                  <MenuItem key={country.iso2code} value={country.iso2code}>
+                    {country.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           )}
-        />
-      </>
+        </Grid>
+
+        {/* Row 2: Radius Buttons */}
+        <Grid item xs={12}>
+          <ToggleButtonGroup
+            value={radius}
+            exclusive
+            onChange={handleRadiusChange}
+            size="small"
+            disabled={searchMode === 'station'}
+            sx={{ 
+              width: '100%',
+              '& .MuiToggleButton-root': {
+                flex: 1,
+              },
+              opacity: searchMode === 'station' ? 0.5 : 1,
+            }}
+          >
+            {RADIUS_OPTIONS.map((option) => (
+              <ToggleButton key={`radius-${option}`} value={option}>
+                {option} km
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Grid>
+
+        {/* Row 3: Branch Selection */}
+        <Grid item xs={12}>
+          {searchMode === 'location' && stations.length > 0 ? (
+            <Autocomplete
+              options={stations}
+              getOptionLabel={(station) => station.title}
+              onChange={(_, station) => onChange(station)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, station) => {
+                const { key, ...otherProps } = props;
+                return (
+                  <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      {getStationIcon(station)}
+                      <Box>
+                        <Typography variant="body1">
+                          {station.title}
+                          {station.stationInformation?.iataCode && (
+                            <Typography 
+                              component="span" 
+                              sx={{ 
+                                ml: 1,
+                                color: 'text.secondary',
+                                fontSize: '0.875rem',
+                                fontWeight: 'medium'
+                              }}
+                            >
+                              ({station.stationInformation.iataCode})
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {station.subtitle}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </li>
+                );
+              }}
+              renderGroup={(params) => (
+                <Box key={params.key}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      backgroundColor: 'grey.100',
+                      color: 'text.secondary',
+                      fontWeight: 'medium'
+                    }}
+                  >
+                    {params.group}
+                  </Typography>
+                  {params.children}
+                  <Divider />
+                </Box>
+              )}
+            />
+          ) : searchMode === 'station' && (
+            <Autocomplete
+              options={allStations}
+              getOptionLabel={(station) => station.title}
+              onChange={(_, station) => onChange(station)}
+              disabled={!selectedCountry}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+              renderOption={(props, station) => {
+                const { key, ...otherProps } = props;
+                return (
+                  <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      {getStationIcon(station)}
+                      <Box>
+                        <Typography variant="body1">
+                          {station.title}
+                          {station.stationInformation?.iataCode && (
+                            <Typography 
+                              component="span" 
+                              sx={{ 
+                                ml: 1,
+                                color: 'text.secondary',
+                                fontSize: '0.875rem',
+                                fontWeight: 'medium'
+                              }}
+                            >
+                              ({station.stationInformation.iataCode})
+                            </Typography>
+                          )}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {station.subtitle}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </li>
+                );
+              }}
+              renderGroup={(params) => (
+                <Box key={params.key}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      backgroundColor: 'grey.100',
+                      color: 'text.secondary',
+                      fontWeight: 'medium'
+                    }}
+                  >
+                    {params.group}
+                  </Typography>
+                  {params.children}
+                  <Divider />
+                </Box>
+              )}
+            />
+          )}
+        </Grid>
+      </Grid>
     );
   };
 
   return (
     <Box sx={{ position: 'relative' }}>
       {(loading || !isLoaded) && <LoadingOverlay />}
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {showWarning && (
           <Alert 
             severity="warning" 
-            sx={{ mb: 2 }}
             onClose={() => setShowWarning(false)}
           >
             {warningMessage}
           </Alert>
         )}
+        
         {renderSearchInput()}
-
-        {searchMode === 'location' && stations.length > 0 && (
-          <Autocomplete
-            options={stations}
-            getOptionLabel={(station) => station.title}
-            onChange={(_, station) => onChange(station)}
-            groupBy={(option) => {
-              const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
-              if (subtypes.includes('airport')) return 'Airports';
-              if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
-              return 'Downtown Locations';
-            }}
-            renderOption={(props, station) => {
-              const { key, ...otherProps } = props;
-              return (
-                <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    {getStationIcon(station)}
-                    <Box>
-                      <Typography variant="body1">
-                        {station.title}
-                        <Typography 
-                          component="span" 
-                          sx={{ 
-                            ml: 1,
-                            color: 'text.secondary',
-                            fontSize: '0.875rem'
-                          }}
-                        >
-                          ({station.distance?.toFixed(1) ?? 0} km)
-                        </Typography>
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {station.subtitle}
-                      </Typography>
-                    </Box>
-                  </Box>
-                </li>
-              );
-            }}
-            renderGroup={(params) => (
-              <Box key={params.key}>
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    px: 2,
-                    py: 1,
-                    backgroundColor: 'grey.100',
-                    color: 'text.secondary',
-                    fontWeight: 'medium'
-                  }}
-                >
-                  {params.group}
-                </Typography>
-                {params.children}
-                <Divider />
-              </Box>
-            )}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
-                placeholder="Select nearby station"
-                fullWidth
-                sx={{ mt: 2 }}
-              />
-            )}
-          />
-        )}
       </Box>
     </Box>
   );
