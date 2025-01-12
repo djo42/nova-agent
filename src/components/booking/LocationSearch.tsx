@@ -156,6 +156,9 @@ export const LocationSearch = ({
   const [warningMessage, setWarningMessage] = useState('');
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
+  const [countrySearchTerm, setCountrySearchTerm] = useState('');
+  const [filteredCountries, setFilteredCountries] = useState<Country[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   
   const { isLoaded } = useGoogleMaps();
 
@@ -290,6 +293,7 @@ export const LocationSearch = ({
   useEffect(() => {
     const fetchCountries = async () => {
       try {
+        setIsLoadingCountries(true);
         const apiClient = new ApiClient('/api');
         const data = await apiClient.request<Country[]>('/stations/countries', {
           headers: {
@@ -299,6 +303,8 @@ export const LocationSearch = ({
         setCountries(data);
       } catch (error) {
         console.error('Error fetching countries:', error);
+      } finally {
+        setIsLoadingCountries(false);
       }
     };
     fetchCountries();
@@ -393,21 +399,59 @@ export const LocationSearch = ({
             />
           ) : (
             <FormControl fullWidth>
-              <InputLabel>Country</InputLabel>
-              <Select
-                value={selectedCountry?.iso2code || ''}
-                onChange={(e) => {
-                  const country = countries.find(c => c.iso2code === e.target.value);
-                  setSelectedCountry(country || null);
+              <Autocomplete
+                options={countries}
+                getOptionLabel={(country) => country.name}
+                value={selectedCountry}
+                onChange={(_, country) => {
+                  setSelectedCountry(country);
+                  onChange(null); // Reset branch selection
                 }}
-                label="Country"
-              >
-                {countries.map((country) => (
-                  <MenuItem key={country.iso2code} value={country.iso2code}>
-                    {country.name}
-                  </MenuItem>
-                ))}
-              </Select>
+                loading={isLoadingCountries}
+                autoHighlight
+                filterOptions={(options, { inputValue }) => {
+                  return options.filter(country =>
+                    country.name.toLowerCase().includes(inputValue.toLowerCase()) ||
+                    country.iso2code.toLowerCase().includes(inputValue.toLowerCase())
+                  );
+                }}
+                onInputChange={(_, value) => {
+                  setCountrySearchTerm(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Country"
+                    placeholder="Search country"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <>
+                          {isLoadingCountries ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                renderOption={(props, country) => {
+                  const { key, ...otherProps } = props;
+                  return (
+                    <li key={country.iso2code} {...otherProps}>
+                      <Typography>
+                        {country.name} ({country.iso2code})
+                      </Typography>
+                    </li>
+                  );
+                }}
+              />
             </FormControl>
           )}
         </Grid>
