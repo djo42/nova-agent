@@ -16,6 +16,7 @@ import {
   Checkbox,
   FormControlLabel,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import { StationAutocomplete } from './StationAutocomplete';
 import { Country, Station, BookingFormData } from '../../types/booking';
@@ -80,6 +81,10 @@ interface OfferResponse {
       totalPrice: {
         amount: string;
         currency: string;
+        unit: string;
+        unitKey: string;
+        net: string;
+        gross: string;
       };
     };
   }>;
@@ -345,6 +350,16 @@ export const BookingMask = () => {
       setSelectedDates(prev => ({ ...prev, return: new Date(initialFormData.returnDate) }));
     }
   }, [initialFormData]);
+
+  const sortedOffers = useMemo(() => {
+    if (!offers?.offers) return [];
+    return [...offers.offers].sort((a, b) => {
+      // Remove any currency symbols and convert to number
+      const priceA = Number(a.prices.totalPrice.gross.replace(/[^0-9.-]+/g, ''));
+      const priceB = Number(b.prices.totalPrice.gross.replace(/[^0-9.-]+/g, ''));
+      return priceA - priceB;
+    });
+  }, [offers]);
 
   return (
     <>
@@ -785,66 +800,84 @@ export const BookingMask = () => {
 
       {/* Separate Offers Container */}
       {showOffers && (
-        <div> {/* Using div to avoid MUI Box styling */}
+        <div>
           <Box sx={{ maxWidth: '1200px', mx: 'auto', mt: 10 }}>
             <Typography variant="h5" sx={{ py: 3 }}>Available Vehicles</Typography>
-            <Grid container spacing={3}>
-              {offers?.offers.map((offer) => (
-                <Grid item xs={12} md={6} lg={4} key={offer.id}>
-                  <Paper 
-                    elevation={2}
-                    sx={{ 
-                      p: 2,
-                      borderRadius: 2,
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      border: 'none'
-                    }}
-                  >
-                    <Box sx={{ position: 'relative', pb: '56.25%', mb: 2 }}>
-                      <img
-                        src={offer.vehicleGroupInfo.groupInfo.imageUrl}
-                        alt={offer.title}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          borderRadius: 8,
-                        }}
-                      />
-                    </Box>
-                    <Typography variant="h6" gutterBottom>
-                      {offer.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {offer.vehicleGroupInfo.groupInfo.examples.join(' or ')}
-                    </Typography>
-                    <Box sx={{ mt: 'auto', pt: 2 }}>
-                      <Typography variant="h5" color={SIXT_ORANGE}>
-                        {offer.prices.totalPrice.amount} {offer.prices.totalPrice.currency}
+            
+            {isLoadingOffers ? (
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                minHeight: '300px' 
+              }}>
+                <CircularProgress sx={{ color: SIXT_ORANGE }} />
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {sortedOffers.map((offer) => (
+                  <Grid item xs={12} md={6} lg={4} key={offer.id}>
+                    <Paper 
+                      elevation={2}
+                      sx={{ 
+                        p: 2,
+                        borderRadius: 2,
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        border: 'none'
+                      }}
+                    >
+                      <Box sx={{ 
+                        position: 'relative', 
+                        pb: '56.25%', 
+                        mb: 2,
+                        overflow: 'hidden',
+                        borderRadius: 8
+                      }}>
+                        <img
+                          src={offer.vehicleGroupInfo.groupInfo.imageUrl}
+                          alt={offer.title}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '125%',
+                            height: '125%',
+                            objectFit: 'cover',
+                            transform: 'translate(-12.5%, -12.5%)'
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="h6" gutterBottom>
+                        {offer.title}
                       </Typography>
-                      <Button 
-                        variant="contained"
-                        fullWidth
-                        sx={{ 
-                          mt: 2,
-                          backgroundColor: SIXT_ORANGE,
-                          '&:hover': {
-                            backgroundColor: '#cc4c00',
-                          },
-                        }}
-                      >
-                        Book now
-                      </Button>
-                    </Box>
-                  </Paper>
-                </Grid>
-              ))}
-            </Grid>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {offer.vehicleGroupInfo.groupInfo.examples.join(' or ')}
+                      </Typography>
+                      <Box sx={{ mt: 'auto', pt: 2 }}>
+                        <Typography variant="h5" color={SIXT_ORANGE}>
+                          {offer.prices.totalPrice.amount} {offer.prices.totalPrice.currency}
+                        </Typography>
+                        <Button 
+                          variant="contained"
+                          fullWidth
+                          sx={{ 
+                            mt: 2,
+                            backgroundColor: SIXT_ORANGE,
+                            '&:hover': {
+                              backgroundColor: '#cc4c00',
+                            },
+                          }}
+                        >
+                          Book now
+                        </Button>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
           </Box>
         </div>
       )}
