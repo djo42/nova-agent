@@ -16,6 +16,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Modal,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
@@ -112,8 +113,32 @@ const getStationIcon = (station: Station) => {
   return <BusinessIcon sx={{ color: 'text.secondary', mr: 1 }} />;
 };
 
-const generateUniqueKey = (prefix: string, value?: string | number) => 
-  `${prefix}-${value || Math.random().toString(36).substr(2, 9)}`;
+const generateUniqueKey = (prefix: string, value: string | number | undefined): string => {
+  if (typeof value === 'undefined') {
+    return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+  return `${prefix}-${value}`;
+};
+
+const LoadingOverlay = () => (
+  <Box
+    sx={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      borderRadius: 1,
+    }}
+  >
+    <CircularProgress sx={{ color: '#ff5f00' }} />
+  </Box>
+);
 
 export const LocationSearch = ({ 
   value,
@@ -339,7 +364,7 @@ export const LocationSearch = ({
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={label}
+                label="Address search"
                 placeholder={isLoaded ? "Enter location to find nearby stations" : 'Loading...'}
                 disabled={!isLoaded}
                 InputProps={{
@@ -366,6 +391,16 @@ export const LocationSearch = ({
                   <Typography variant="body2">{option.description}</Typography>
                 </li>
               );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && suggestions.length > 0) {
+                const firstSuggestion = suggestions[0];
+                console.log('Selected first suggestion:', firstSuggestion);
+                setSelectedValue(firstSuggestion);
+                if (firstSuggestion?.place_id) {
+                  handlePlaceSelect(firstSuggestion.place_id);
+                }
+              }
             }}
           />
 
@@ -497,85 +532,89 @@ export const LocationSearch = ({
   };
 
   return (
-    <Box>
-      {showWarning && (
-        <Alert 
-          severity="warning" 
-          sx={{ mb: 2 }}
-          onClose={() => setShowWarning(false)}
-        >
-          {warningMessage}
-        </Alert>
-      )}
-      {renderSearchInput()}
+    <Box sx={{ position: 'relative' }}>
+      {(loading || !isLoaded) && <LoadingOverlay />}
+      <Box sx={{ position: 'relative' }}>
+        {showWarning && (
+          <Alert 
+            severity="warning" 
+            sx={{ mb: 2 }}
+            onClose={() => setShowWarning(false)}
+          >
+            {warningMessage}
+          </Alert>
+        )}
+        {renderSearchInput()}
 
-      {searchMode === 'location' && stations.length > 0 && (
-        <Autocomplete
-          options={stations}
-          getOptionLabel={(station) => station.title}
-          onChange={(_, station) => onChange(station)}
-          groupBy={(option) => {
-            const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
-            if (subtypes.includes('airport')) return 'Airports';
-            if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
-            return 'Downtown Locations';
-          }}
-          renderOption={(props, station) => {
-            const { key, ...otherProps } = props;
-            return (
-              <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
-                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                  {getStationIcon(station)}
-                  <Box>
-                    <Typography variant="body1">
-                      {station.title}
-                      <Typography 
-                        component="span" 
-                        sx={{ 
-                          ml: 1,
-                          color: 'text.secondary',
-                          fontSize: '0.875rem'
-                        }}
-                      >
-                        ({station.distance?.toFixed(1) ?? 0} km)
+        {searchMode === 'location' && stations.length > 0 && (
+          <Autocomplete
+            options={stations}
+            getOptionLabel={(station) => station.title}
+            onChange={(_, station) => onChange(station)}
+            groupBy={(option) => {
+              const subtypes = option.subtypes?.map(s => s.toLowerCase()) || [];
+              if (subtypes.includes('airport')) return 'Airports';
+              if (subtypes.includes('railway') || subtypes.includes('train_station')) return 'Railway Stations';
+              return 'Downtown Locations';
+            }}
+            renderOption={(props, station) => {
+              const { key, ...otherProps } = props;
+              return (
+                <li key={generateUniqueKey('station', station.id || station.title)} {...otherProps}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    {getStationIcon(station)}
+                    <Box>
+                      <Typography variant="body1">
+                        {station.title}
+                        <Typography 
+                          component="span" 
+                          sx={{ 
+                            ml: 1,
+                            color: 'text.secondary',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          ({station.distance?.toFixed(1) ?? 0} km)
+                        </Typography>
                       </Typography>
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {station.subtitle}
-                    </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {station.subtitle}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              </li>
-            );
-          }}
-          renderGroup={(params) => (
-            <Box key={params.key}>
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  px: 2,
-                  py: 1,
-                  backgroundColor: 'grey.100',
-                  color: 'text.secondary',
-                  fontWeight: 'medium'
-                }}
-              >
-                {params.group}
-              </Typography>
-              {params.children}
-              <Divider />
-            </Box>
-          )}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Select nearby station"
-              fullWidth
-              sx={{ mt: 2 }}
-            />
-          )}
-        />
-      )}
+                </li>
+              );
+            }}
+            renderGroup={(params) => (
+              <Box key={params.key}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    backgroundColor: 'grey.100',
+                    color: 'text.secondary',
+                    fontWeight: 'medium'
+                  }}
+                >
+                  {params.group}
+                </Typography>
+                {params.children}
+                <Divider />
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
+                placeholder="Select nearby station"
+                fullWidth
+                sx={{ mt: 2 }}
+              />
+            )}
+          />
+        )}
+      </Box>
     </Box>
   );
 }; 
