@@ -49,6 +49,7 @@ interface LocationSearchProps {
   searchMode: SearchMode;
   value: Station | null;
   onChange: (station: Station | null) => void;
+  onError?: (message: string | null) => void;
 }
 
 interface PlaceOption {
@@ -149,6 +150,7 @@ export const LocationSearch = ({
   label, 
   placeholder,
   searchMode,
+  onError,
 }: LocationSearchProps) => {
   const [radius, setRadius] = useState<RadiusOption>(10);
   const [loading, setLoading] = useState(false);
@@ -222,43 +224,37 @@ export const LocationSearch = ({
   const searchNearbyStations = useCallback(async (lat: number, lng: number) => {
     try {
       setLoading(true);
-      setShowWarning(false);
       const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
       
       const latitude = Number(lat).toFixed(6);
       const longitude = Number(lng).toFixed(6);
       
-      console.log('Current radius state in search:', radius);
-      
       const url = `/stations/geo?latitude=${latitude}&longitude=${longitude}&maxDistance=${radius}&country=DE`;
-
-      console.log('Making request with radius:', radius);
-      console.log('Full URL:', `${process.env.NEXT_PUBLIC_SIXT_API_URL}${url}`);
       
-      const nearbyStations = await apiClient.request<Station[]>(
-        url,
-        {
-          headers: {
-            'accept': 'application/json',
-            'Accept-Language': 'en_US',
-            'Content-Type': 'application/json'
-          }
+      try {
+        const nearbyStations = await apiClient.request<Station[]>(url);
+        if (!nearbyStations.length) {
+          onError?.('No stations found. Try increasing radius.');
+          setStations([]);
+          return;
         }
-      );
-      setStations(Array.isArray(nearbyStations) ? sortAndGroupStations(nearbyStations, true) : []);
+        setStations(sortAndGroupStations(nearbyStations, true));
+        onError?.(null);
+      } catch (apiError: any) {
+        if (apiError?.response?.status === 400 || apiError?.status === 400) {
+          onError?.('No stations found. Try increasing radius.');
+        } else {
+          onError?.('No stations found. Try increasing radius.');
+        }
+        setStations([]);
+      }
     } catch (error) {
-      console.error('API Error:', {
-        error,
-        requestUrl: `/stations/geo?latitude=${lat}&longitude=${lng}&maxDistance=${radius}&country=DE`,
-        usedRadius: radius
-      });
       setStations([]);
-      setShowWarning(true);
-      setWarningMessage('No branches found in this area. Please try a different location or increase the search radius.');
+      onError?.('No stations found. Try increasing radius.');
     } finally {
       setLoading(false);
     }
-  }, [radius]);
+  }, [radius, onError]);
 
   // Handle place selection
   const handlePlaceSelect = useCallback(async (placeId: string) => {

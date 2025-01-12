@@ -88,6 +88,7 @@ export const BookingMask = () => {
   const [differentDropoff, setDifferentDropoff] = useState(false);
   const [pickupLabel, setPickupLabel] = useState('Branch');
   const [returnLabel, setReturnLabel] = useState('Branch');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -210,122 +211,105 @@ export const BookingMask = () => {
     }
   }, [differentDropoff]);
 
+  const resetError = () => setErrorMessage(null);
+
+  // Add error reset when changing search modes
+  useEffect(() => {
+    setErrorMessage(null);
+  }, [searchModes]);
+
   return (
-    <Paper 
-      elevation={3} 
-      sx={{ 
-        borderRadius: 2,
-        overflow: 'hidden',
-        backgroundColor: 'white',
-        width: '100%',
-        maxWidth: { xs: '600px', md: '1200px' },
-        margin: '0 auto',
-        '& .MuiOutlinedInput-root': {
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: SIXT_ORANGE,
-          },
-          '&:hover': {
-            '& ~ .MuiFormLabel-root': {
-              color: SIXT_ORANGE,
-            },
-            '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: SIXT_ORANGE,
-            },
-          },
-        },
-        '& .MuiFormLabel-root.Mui-focused': {
-          color: SIXT_ORANGE,
-        },
-        '& .MuiButton-root:not(.MuiButton-contained):hover': {
-          borderColor: SIXT_ORANGE,
-        },
-      }}
-    >
-      <Box sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={{ xs: 2, sm: 3 }}>
-          {/* Vehicle Type Toggle */}
-          <ToggleButtonGroup
-            value={vehicleType}
-            exclusive
-            onChange={(_, value) => value && setVehicleType(value)}
+    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {errorMessage && (
+        <Box 
+          sx={{ 
+            width: '100%',
+            backgroundColor: '#fff3cd',
+            borderBottom: '1px solid #ffeeba',
+            mb: 3,
+          }}
+        >
+          <Alert 
+            severity="warning" 
+            onClose={resetError}
             sx={{ 
-              width: '100%',
-              '& .MuiToggleButton-root': {
-                flex: 1,
-                py: 1.5,
-              }
+              maxWidth: '1200px',
+              margin: '0 auto',
+              borderRadius: 2,
+              '& .MuiAlert-message': {
+                width: '100%',
+              },
             }}
           >
-            <ToggleButton value="cars">
-              <DirectionsCarIcon sx={{ mr: 1 }} />
-              Cars
-            </ToggleButton>
-            <ToggleButton value="trucks">
-              <LocalShippingIcon sx={{ mr: 1 }} />
-              Trucks
-            </ToggleButton>
-          </ToggleButtonGroup>
-
-          {/* Mobile Layout */}
-          <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-            <Stack spacing={2}>
-              {/* Pickup Location */}
-              <Box>
-                <Tabs
-                  value={searchModes.pickup}
-                  onChange={(_, value) => {
-                    setSearchModes(prev => ({ ...prev, pickup: value }));
-                    setFormData(prev => ({ ...prev, pickupStation: null }));
-                  }}
-                  sx={{ mb: 2, ...tabsStyles }}
-                >
-                  <Tab 
-                    icon={<ListIcon />} 
-                    label="Station List" 
-                    value="station"
-                    iconPosition="start"
-                  />
-                  <Tab 
-                    icon={<PlaceIcon />} 
-                    label="Location Search" 
-                    value="location"
-                    iconPosition="start"
-                  />
-                </Tabs>
-                <LocationSearch
-                  value={formData.pickupStation}
-                  onChange={handleStationChange('pickup')}
-                  label="pickup"
-                  searchMode={searchModes.pickup}
-                  placeholder="Airport, city or address"
-                />
-              </Box>
-
-              {/* Return Location Checkbox */}
-              <FormControlLabel
-                control={
-                  <Checkbox 
-                    checked={differentDropoff}
-                    onChange={(e) => setDifferentDropoff(e.target.checked)}
-                    sx={{
-                      color: SIXT_ORANGE,
-                      '&.Mui-checked': {
-                        color: SIXT_ORANGE,
-                      },
-                    }}
-                  />
+            {errorMessage}
+          </Alert>
+        </Box>
+      )}
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          borderRadius: 2,
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          width: '100%',
+          maxWidth: { xs: '600px', md: '1200px' },
+          margin: '0 auto',
+          '& .MuiOutlinedInput-root': {
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: SIXT_ORANGE,
+            },
+            '&:hover': {
+              '& ~ .MuiFormLabel-root': {
+                color: SIXT_ORANGE,
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: SIXT_ORANGE,
+              },
+            },
+          },
+          '& .MuiFormLabel-root.Mui-focused': {
+            color: SIXT_ORANGE,
+          },
+          '& .MuiButton-root:not(.MuiButton-contained):hover': {
+            borderColor: SIXT_ORANGE,
+          },
+        }}
+      >
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack spacing={{ xs: 2, sm: 3 }}>
+            {/* Vehicle Type Toggle */}
+            <ToggleButtonGroup
+              value={vehicleType}
+              exclusive
+              onChange={(_, value) => value && setVehicleType(value)}
+              sx={{ 
+                width: '100%',
+                '& .MuiToggleButton-root': {
+                  flex: 1,
+                  py: 1.5,
                 }
-                label="Return at different branch"
-              />
+              }}
+            >
+              <ToggleButton value="cars">
+                <DirectionsCarIcon sx={{ mr: 1 }} />
+                Cars
+              </ToggleButton>
+              <ToggleButton value="trucks">
+                <LocalShippingIcon sx={{ mr: 1 }} />
+                Trucks
+              </ToggleButton>
+            </ToggleButtonGroup>
 
-              {/* Return Location */}
-              {differentDropoff && (
+            {/* Mobile Layout */}
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              <Stack spacing={2}>
+                {/* Pickup Location */}
                 <Box>
                   <Tabs
-                    value={searchModes.return}
+                    value={searchModes.pickup}
                     onChange={(_, value) => {
-                      setSearchModes(prev => ({ ...prev, return: value }));
-                      setFormData(prev => ({ ...prev, returnStation: null }));
+                      setSearchModes(prev => ({ ...prev, pickup: value }));
+                      setFormData(prev => ({ ...prev, pickupStation: null }));
                     }}
                     sx={{ mb: 2, ...tabsStyles }}
                   >
@@ -343,138 +327,155 @@ export const BookingMask = () => {
                     />
                   </Tabs>
                   <LocationSearch
-                    value={formData.returnStation}
-                    onChange={handleStationChange('return')}
-                    label="return"
-                    searchMode={searchModes.return}
+                    value={formData.pickupStation}
+                    onChange={handleStationChange('pickup')}
+                    label="pickup"
+                    searchMode={searchModes.pickup}
                     placeholder="Airport, city or address"
+                    onError={setErrorMessage}
                   />
                 </Box>
-              )}
 
-              {/* Date Fields */}
-              <TextField
-                fullWidth
-                label="Pick-up date & time"
-                placeholder={today}
-                value={formatDateTimeDisplay(pickupDate)}
-                onClick={handleDateFieldClick}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <CalendarTodayIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-              <TextField
-                fullWidth
-                label="Return date & time"
-                placeholder={today}
-                value={formatDateTimeDisplay(returnDate)}
-                onClick={handleDateFieldClick}
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <CalendarTodayIcon />
-                    </InputAdornment>
-                  ),
-                }}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-              <Button
-                variant="contained"
-                fullWidth
-                sx={{ 
-                  height: '56px',
-                  backgroundColor: SIXT_ORANGE,
-                  '&:hover': {
-                    backgroundColor: '#cc4c00',
-                  },
-                }}
-              >
-                Show cars
-              </Button>
-            </Stack>
-          </Box>
-
-          {/* Desktop Layout */}
-          <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-            <Grid container spacing={2}>
-              {/* Location Fields Container */}
-              <Grid container item spacing={2}>
                 {/* Return Location Checkbox */}
-                <Grid item xs={12}>
-                  <FormControlLabel
-                    control={
-                      <Checkbox 
-                        checked={differentDropoff}
-                        onChange={(e) => setDifferentDropoff(e.target.checked)}
-                        sx={{
+                <FormControlLabel
+                  control={
+                    <Checkbox 
+                      checked={differentDropoff}
+                      onChange={(e) => setDifferentDropoff(e.target.checked)}
+                      sx={{
+                        color: SIXT_ORANGE,
+                        '&.Mui-checked': {
                           color: SIXT_ORANGE,
-                          '&.Mui-checked': {
-                            color: SIXT_ORANGE,
-                          },
-                        }}
+                        },
+                      }}
+                    />
+                  }
+                  label="Return at different branch"
+                />
+
+                {/* Return Location */}
+                {differentDropoff && (
+                  <Box>
+                    <Tabs
+                      value={searchModes.return}
+                      onChange={(_, value) => {
+                        setSearchModes(prev => ({ ...prev, return: value }));
+                        setFormData(prev => ({ ...prev, returnStation: null }));
+                      }}
+                      sx={{ mb: 2, ...tabsStyles }}
+                    >
+                      <Tab 
+                        icon={<ListIcon />} 
+                        label="Station List" 
+                        value="station"
+                        iconPosition="start"
                       />
-                    }
-                    label="Return at different branch"
-                  />
-                </Grid>
+                      <Tab 
+                        icon={<PlaceIcon />} 
+                        label="Location Search" 
+                        value="location"
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                    <LocationSearch
+                      value={formData.returnStation}
+                      onChange={handleStationChange('return')}
+                      label="return"
+                      searchMode={searchModes.return}
+                      placeholder="Airport, city or address"
+                      onError={setErrorMessage}
+                    />
+                  </Box>
+                )}
 
-                {/* Branch Fields Container */}
-                <Grid item xs={12}>
-                  <Grid container spacing={2}>
-                    {/* Pickup Location */}
-                    <Grid item xs={12} md={differentDropoff ? 6 : 12}>
-                      <Box>
-                        <Tabs
-                          value={searchModes.pickup}
-                          onChange={(_, value) => {
-                            setSearchModes(prev => ({ ...prev, pickup: value }));
-                            setFormData(prev => ({ ...prev, pickupStation: null }));
+                {/* Date Fields */}
+                <TextField
+                  fullWidth
+                  label="Pick-up date & time"
+                  placeholder={today}
+                  value={formatDateTimeDisplay(pickupDate)}
+                  onClick={handleDateFieldClick}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <CalendarTodayIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  label="Return date & time"
+                  placeholder={today}
+                  value={formatDateTimeDisplay(returnDate)}
+                  onClick={handleDateFieldClick}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <CalendarTodayIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  fullWidth
+                  sx={{ 
+                    height: '56px',
+                    backgroundColor: SIXT_ORANGE,
+                    '&:hover': {
+                      backgroundColor: '#cc4c00',
+                    },
+                  }}
+                >
+                  Show cars
+                </Button>
+              </Stack>
+            </Box>
+
+            {/* Desktop Layout */}
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <Grid container spacing={2}>
+                {/* Location Fields Container */}
+                <Grid container item spacing={2}>
+                  {/* Return Location Checkbox */}
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox 
+                          checked={differentDropoff}
+                          onChange={(e) => setDifferentDropoff(e.target.checked)}
+                          sx={{
+                            color: SIXT_ORANGE,
+                            '&.Mui-checked': {
+                              color: SIXT_ORANGE,
+                            },
                           }}
-                          sx={{ mb: 2, ...tabsStyles }}
-                        >
-                          <Tab 
-                            icon={<ListIcon />} 
-                            label="Station List" 
-                            value="station"
-                            iconPosition="start"
-                          />
-                          <Tab 
-                            icon={<PlaceIcon />} 
-                            label="Location Search" 
-                            value="location"
-                            iconPosition="start"
-                          />
-                        </Tabs>
-                        <LocationSearch
-                          value={formData.pickupStation}
-                          onChange={handleStationChange('pickup')}
-                          label="pickup"
-                          searchMode={searchModes.pickup}
-                          placeholder="Airport, city or address"
                         />
-                      </Box>
-                    </Grid>
+                      }
+                      label="Return at different branch"
+                    />
+                  </Grid>
 
-                    {/* Return Location */}
-                    {differentDropoff && (
-                      <Grid item xs={12} md={6}>
+                  {/* Branch Fields Container */}
+                  <Grid item xs={12}>
+                    <Grid container spacing={2}>
+                      {/* Pickup Location */}
+                      <Grid item xs={12} md={differentDropoff ? 6 : 12}>
                         <Box>
                           <Tabs
-                            value={searchModes.return}
+                            value={searchModes.pickup}
                             onChange={(_, value) => {
-                              setSearchModes(prev => ({ ...prev, return: value }));
-                              setFormData(prev => ({ ...prev, returnStation: null }));
+                              setSearchModes(prev => ({ ...prev, pickup: value }));
+                              setFormData(prev => ({ ...prev, pickupStation: null }));
                             }}
                             sx={{ mb: 2, ...tabsStyles }}
                           >
@@ -492,120 +493,158 @@ export const BookingMask = () => {
                             />
                           </Tabs>
                           <LocationSearch
-                            value={formData.returnStation}
-                            onChange={handleStationChange('return')}
-                            label="return"
-                            searchMode={searchModes.return}
+                            value={formData.pickupStation}
+                            onChange={handleStationChange('pickup')}
+                            label="pickup"
+                            searchMode={searchModes.pickup}
                             placeholder="Airport, city or address"
+                            onError={setErrorMessage}
                           />
                         </Box>
                       </Grid>
-                    )}
-                  </Grid>
-                </Grid>
-              </Grid>
 
-              {/* Date Fields and Search Button */}
-              <Grid container item spacing={2}>
-                <Grid item xs={8}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Pick-up date & time"
-                        placeholder={today}
-                        value={formatDateTimeDisplay(pickupDate)}
-                        onClick={handleDateFieldClick}
-                        InputProps={{
-                          readOnly: true,
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <CalendarTodayIcon />
-                            </InputAdornment>
-                          ),
-                        }}
-                        InputLabelProps={{
-                          shrink: true,
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Return date & time"
-                        placeholder={today}
-                        value={formatDateTimeDisplay(returnDate)}
-                        onClick={handleDateFieldClick}
-                        InputProps={{
-                          readOnly: true,
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <CalendarTodayIcon />
-                            </InputAdornment>
-                          ),
-                        }}
-                        InputLabelProps={{
-                          shrink: true,
-                        }}
-                      />
+                      {/* Return Location */}
+                      {differentDropoff && (
+                        <Grid item xs={12} md={6}>
+                          <Box>
+                            <Tabs
+                              value={searchModes.return}
+                              onChange={(_, value) => {
+                                setSearchModes(prev => ({ ...prev, return: value }));
+                                setFormData(prev => ({ ...prev, returnStation: null }));
+                              }}
+                              sx={{ mb: 2, ...tabsStyles }}
+                            >
+                              <Tab 
+                                icon={<ListIcon />} 
+                                label="Station List" 
+                                value="station"
+                                iconPosition="start"
+                              />
+                              <Tab 
+                                icon={<PlaceIcon />} 
+                                label="Location Search" 
+                                value="location"
+                                iconPosition="start"
+                              />
+                            </Tabs>
+                            <LocationSearch
+                              value={formData.returnStation}
+                              onChange={handleStationChange('return')}
+                              label="return"
+                              searchMode={searchModes.return}
+                              placeholder="Airport, city or address"
+                              onError={setErrorMessage}
+                            />
+                          </Box>
+                        </Grid>
+                      )}
                     </Grid>
                   </Grid>
                 </Grid>
 
-                {/* Search Button */}
-                <Grid item xs={4}>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    sx={{ 
-                      height: '56px',
-                      backgroundColor: SIXT_ORANGE,
-                      '&:hover': {
-                        backgroundColor: '#cc4c00',
-                      },
-                    }}
-                  >
-                    Show cars
-                  </Button>
+                {/* Date Fields and Search Button */}
+                <Grid container item spacing={2}>
+                  <Grid item xs={8}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="Pick-up date & time"
+                          placeholder={today}
+                          value={formatDateTimeDisplay(pickupDate)}
+                          onClick={handleDateFieldClick}
+                          InputProps={{
+                            readOnly: true,
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <CalendarTodayIcon />
+                              </InputAdornment>
+                            ),
+                          }}
+                          InputLabelProps={{
+                            shrink: true,
+                          }}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          fullWidth
+                          label="Return date & time"
+                          placeholder={today}
+                          value={formatDateTimeDisplay(returnDate)}
+                          onClick={handleDateFieldClick}
+                          InputProps={{
+                            readOnly: true,
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <CalendarTodayIcon />
+                              </InputAdornment>
+                            ),
+                          }}
+                          InputLabelProps={{
+                            shrink: true,
+                          }}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Grid>
+
+                  {/* Search Button */}
+                  <Grid item xs={4}>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      sx={{ 
+                        height: '56px',
+                        backgroundColor: SIXT_ORANGE,
+                        '&:hover': {
+                          backgroundColor: '#cc4c00',
+                        },
+                      }}
+                    >
+                      Show cars
+                    </Button>
+                  </Grid>
                 </Grid>
               </Grid>
-            </Grid>
-          </Box>
-        </Stack>
-      </Box>
+            </Box>
+          </Stack>
+        </Box>
 
-      {/* Warning Snackbar */}
-      <Snackbar 
-        open={showBranchWarning} 
-        autoHideDuration={4000} 
-        onClose={() => setShowBranchWarning(false)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setShowBranchWarning(false)} 
-          severity="warning"
-          sx={{ width: '100%' }}
+        {/* Warning Snackbar */}
+        <Snackbar 
+          open={showBranchWarning} 
+          autoHideDuration={4000} 
+          onClose={() => setShowBranchWarning(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          Please select a pick-up location first
-        </Alert>
-      </Snackbar>
+          <Alert 
+            onClose={() => setShowBranchWarning(false)} 
+            severity="warning"
+            sx={{ width: '100%' }}
+          >
+            Please select a pick-up location first
+          </Alert>
+        </Snackbar>
 
-      <DateRangePicker
-        open={datePickerOpen}
-        onClose={() => setDatePickerOpen(false)}
-        onSelect={handleDateSelect}
-        initialPickupDate={pickupDate}
-        initialReturnDate={returnDate}
-      />
+        <DateRangePicker
+          open={datePickerOpen}
+          onClose={() => setDatePickerOpen(false)}
+          onSelect={handleDateSelect}
+          initialPickupDate={pickupDate}
+          initialReturnDate={returnDate}
+        />
 
-      <TimePickerDialog
-        open={timePickerOpen}
-        onClose={() => setTimePickerOpen(false)}
-        onSelect={handleTimeSelect}
-        type={timePickerType}
-        station={timePickerType === 'pickup' ? formData.pickupStation : formData.returnStation}
-        selectedDate={tempDate}
-      />
-    </Paper>
+        <TimePickerDialog
+          open={timePickerOpen}
+          onClose={() => setTimePickerOpen(false)}
+          onSelect={handleTimeSelect}
+          type={timePickerType}
+          station={timePickerType === 'pickup' ? formData.pickupStation : formData.returnStation}
+          selectedDate={tempDate}
+        />
+      </Paper>
+    </Box>
   );
 }; 
