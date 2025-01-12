@@ -112,7 +112,7 @@ const getStationIcon = (station: Station) => {
 
 const generateUniqueKey = (prefix: string, value: string | number | undefined): string => {
   if (typeof value === 'undefined') {
-    return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+    return `${prefix}-${Math.random().toString(36).substring(2, 11)}`;
   }
   return `${prefix}-${value}`;
 };
@@ -166,7 +166,7 @@ export const LocationSearch = ({
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
+        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL as string);
         const stations = await apiClient.request<Station[]>(
           `/stations/country/DE?corporateCustomerNumber=98765`,
           {
@@ -220,7 +220,7 @@ export const LocationSearch = ({
   const searchNearbyStations = useCallback(async (lat: number, lng: number) => {
     try {
       setLoading(true);
-      const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
+      const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL as string);
       
       const latitude = Number(lat).toFixed(6);
       const longitude = Number(lng).toFixed(6);
@@ -316,7 +316,7 @@ export const LocationSearch = ({
       if (!selectedCountry) return;
       
       try {
-        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL);
+        const apiClient = new ApiClient(process.env.NEXT_PUBLIC_SIXT_API_URL as string);
         const stations = await apiClient.request<Station[]>(
           `/stations/country/${selectedCountry.iso2code}`,
           {
@@ -632,7 +632,7 @@ export const LocationSearch = ({
                       <Box>
                         <Typography variant="body1">
                           {station.title}
-                          {searchMode === 'location' && (
+                          {searchMode === 'station' && (
                             <Typography 
                               component="span" 
                               sx={{ 
