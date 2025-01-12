@@ -82,18 +82,11 @@ const sortAndGroupStations = (stations: Station[], sortByDistance: boolean = fal
     return acc;
   }, { airports: [] as Station[], railways: [] as Station[], others: [] as Station[] });
 
-  // Sort function based on distance or IATA code
+  // Sort function based on mode
   const sortStations = (a: Station, b: Station) => {
-    if (sortByDistance) {
-      return (a.distance || 0) - (b.distance || 0);
+    if (sortByDistance && a.distance !== undefined && b.distance !== undefined) {
+      return a.distance - b.distance;
     }
-    
-    // Original IATA code sorting for station list
-    const aCode = a.stationInformation?.iataCode;
-    const bCode = b.stationInformation?.iataCode;
-    if (aCode && !bCode) return -1;
-    if (!aCode && bCode) return 1;
-    if (aCode && bCode) return aCode.localeCompare(bCode);
     return (a.title || '').localeCompare(b.title || '');
   };
 
@@ -462,6 +455,21 @@ export const LocationSearch = ({
               getOptionLabel={(station) => station.title}
               onChange={(_, station) => onChange(station)}
               disabled={!selectedValue || stations.length === 0}
+              autoHighlight
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && stations.length > 0) {
+                  event.preventDefault();
+                  const inputValue = (event.target as HTMLInputElement).value.toLowerCase();
+                  const filteredStations = stations.filter(station => 
+                    station.title.toLowerCase().includes(inputValue)
+                  );
+                  // Simulate selection of first matching station
+                  const stationToSelect = filteredStations.length > 0 ? filteredStations[0] : stations[0];
+                  onChange(stationToSelect);
+                  // Clear the input to show the selected value
+                  (event.target as HTMLInputElement).blur();
+                }
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -485,17 +493,16 @@ export const LocationSearch = ({
                       <Box>
                         <Typography variant="body1">
                           {station.title}
-                          {station.stationInformation?.iataCode && (
+                          {searchMode === 'location' && (
                             <Typography 
                               component="span" 
                               sx={{ 
                                 ml: 1,
                                 color: 'text.secondary',
                                 fontSize: '0.875rem',
-                                fontWeight: 'medium'
                               }}
                             >
-                              ({station.stationInformation.iataCode})
+                              ({station.distance?.toFixed(1)} km)
                             </Typography>
                           )}
                         </Typography>
@@ -530,12 +537,38 @@ export const LocationSearch = ({
             <Autocomplete
               options={allStations}
               getOptionLabel={(station) => station.title}
+              filterOptions={(options, { inputValue }) => {
+                const searchTerm = inputValue.toLowerCase();
+                return options.filter(station => 
+                  station.title.toLowerCase().includes(searchTerm) ||
+                  station.subtitle.toLowerCase().includes(searchTerm) ||
+                  station.stationInformation?.iataCode?.toLowerCase().includes(searchTerm)
+                );
+              }}
               onChange={(_, station) => onChange(station)}
               disabled={!selectedCountry}
+              autoHighlight
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && allStations.length > 0) {
+                  event.preventDefault();
+                  const searchTerm = (event.target as HTMLInputElement).value.toLowerCase();
+                  const filteredStations = allStations.filter(station => 
+                    station.title.toLowerCase().includes(searchTerm) ||
+                    station.subtitle.toLowerCase().includes(searchTerm) ||
+                    station.stationInformation?.iataCode?.toLowerCase().includes(searchTerm)
+                  );
+                  if (filteredStations.length > 0) {
+                    onChange(filteredStations[0]);
+                    // Clear the input to show the selected value
+                    (event.target as HTMLInputElement).blur();
+                  }
+                }
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label={label === 'pickup' ? 'Pick-up branch' : 'Return branch'}
+                  placeholder="Search by name, address or IATA code"
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (
@@ -555,17 +588,16 @@ export const LocationSearch = ({
                       <Box>
                         <Typography variant="body1">
                           {station.title}
-                          {station.stationInformation?.iataCode && (
+                          {searchMode === 'location' && (
                             <Typography 
                               component="span" 
                               sx={{ 
                                 ml: 1,
                                 color: 'text.secondary',
                                 fontSize: '0.875rem',
-                                fontWeight: 'medium'
                               }}
                             >
-                              ({station.stationInformation.iataCode})
+                              ({station.distance?.toFixed(1)} km)
                             </Typography>
                           )}
                         </Typography>
