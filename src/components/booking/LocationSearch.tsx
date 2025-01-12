@@ -29,6 +29,8 @@ import FlightIcon from '@mui/icons-material/Flight';
 import TrainIcon from '@mui/icons-material/Train';
 import BusinessIcon from '@mui/icons-material/Business';
 
+const SIXT_ORANGE = '#ff5f00';
+
 interface Station {
   id: string;
   title: string;
@@ -424,7 +426,7 @@ export const LocationSearch = ({
         {/* Row 2: Radius Buttons */}
         <Grid item xs={12}>
           <ToggleButtonGroup
-            value={radius}
+            value={searchMode === 'station' ? null : radius}
             exclusive
             onChange={handleRadiusChange}
             size="small"
@@ -433,12 +435,23 @@ export const LocationSearch = ({
               width: '100%',
               '& .MuiToggleButton-root': {
                 flex: 1,
+                bgcolor: searchMode === 'station' ? 'background.paper' : 'inherit',
+                '&.Mui-selected': {
+                  bgcolor: searchMode === 'station' ? 'background.paper' : `${SIXT_ORANGE}20`,
+                  color: searchMode === 'station' ? 'text.disabled' : SIXT_ORANGE,
+                  '&:hover': {
+                    bgcolor: searchMode === 'station' ? 'background.paper' : `${SIXT_ORANGE}30`,
+                  }
+                },
               },
               opacity: searchMode === 'station' ? 0.5 : 1,
             }}
           >
             {RADIUS_OPTIONS.map((option) => (
-              <ToggleButton key={`radius-${option}`} value={option}>
+              <ToggleButton 
+                key={`radius-${option}`} 
+                value={option}
+              >
                 {option} km
               </ToggleButton>
             ))}
@@ -447,15 +460,16 @@ export const LocationSearch = ({
 
         {/* Row 3: Branch Selection */}
         <Grid item xs={12}>
-          {searchMode === 'location' && stations.length > 0 ? (
+          {searchMode === 'location' ? (
             <Autocomplete
               options={stations}
               getOptionLabel={(station) => station.title}
               onChange={(_, station) => onChange(station)}
+              disabled={!selectedValue || stations.length === 0}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
+                  label={label === 'pickup' ? 'Pick-up branch' : 'Return branch'}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (
@@ -516,7 +530,7 @@ export const LocationSearch = ({
                 </Box>
               )}
             />
-          ) : searchMode === 'station' && (
+          ) : (
             <Autocomplete
               options={allStations}
               getOptionLabel={(station) => station.title}
@@ -525,7 +539,7 @@ export const LocationSearch = ({
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={`${label.includes('Pickup') ? 'Pickup branch' : 'Return branch'}`}
+                  label={label === 'pickup' ? 'Pick-up branch' : 'Return branch'}
                   InputProps={{
                     ...params.InputProps,
                     startAdornment: (
@@ -593,18 +607,18 @@ export const LocationSearch = ({
   };
 
   return (
-    <Box sx={{ position: 'relative' }}>
-      {(loading || !isLoaded) && <LoadingOverlay />}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {showWarning && (
-          <Alert 
-            severity="warning" 
-            onClose={() => setShowWarning(false)}
-          >
-            {warningMessage}
-          </Alert>
-        )}
-        
+    <Box>
+      {showWarning && (
+        <Alert 
+          severity="warning" 
+          onClose={() => setShowWarning(false)}
+          sx={{ mb: 2 }}
+        >
+          {warningMessage}
+        </Alert>
+      )}
+      <Box sx={{ position: 'relative' }}>
+        {(loading || !isLoaded) && <LoadingOverlay />}
         {renderSearchInput()}
       </Box>
     </Box>

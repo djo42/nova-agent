@@ -85,6 +85,9 @@ export const BookingMask = () => {
     pickup: 'station',
     return: 'station'
   });
+  const [differentDropoff, setDifferentDropoff] = useState(false);
+  const [pickupLabel, setPickupLabel] = useState('Branch');
+  const [returnLabel, setReturnLabel] = useState('Branch');
 
   const { countries, loading: countriesLoading, error: countriesError } = useCountries();
 
@@ -196,6 +199,17 @@ export const BookingMask = () => {
     }
   }, [differentReturnLocation, formData.pickupStation]);
 
+  // Add effect to handle label changes
+  useEffect(() => {
+    if (differentDropoff) {
+      setPickupLabel('Pick-up branch');
+      setReturnLabel('Return branch');
+    } else {
+      setPickupLabel('Branch');
+      setReturnLabel('Branch');
+    }
+  }, [differentDropoff]);
+
   return (
     <Paper 
       elevation={3} 
@@ -281,7 +295,7 @@ export const BookingMask = () => {
                 <LocationSearch
                   value={formData.pickupStation}
                   onChange={handleStationChange('pickup')}
-                  label="Pick-up location"
+                  label="pickup"
                   searchMode={searchModes.pickup}
                   placeholder="Airport, city or address"
                 />
@@ -290,16 +304,14 @@ export const BookingMask = () => {
               {/* Return Location Checkbox */}
               <FormControlLabel
                 control={
-                  <Checkbox
-                    checked={differentReturnLocation}
-                    onChange={(e) => {
-                      setDifferentReturnLocation(e.target.checked);
-                      if (!e.target.checked) {
-                        setSearchModes(prev => ({
-                          ...prev,
-                          return: prev.pickup
-                        }));
-                      }
+                  <Checkbox 
+                    checked={differentDropoff}
+                    onChange={(e) => setDifferentDropoff(e.target.checked)}
+                    sx={{
+                      color: SIXT_ORANGE,
+                      '&.Mui-checked': {
+                        color: SIXT_ORANGE,
+                      },
                     }}
                   />
                 }
@@ -307,7 +319,7 @@ export const BookingMask = () => {
               />
 
               {/* Return Location */}
-              {differentReturnLocation && (
+              {differentDropoff && (
                 <Box>
                   <Tabs
                     value={searchModes.return}
@@ -333,7 +345,7 @@ export const BookingMask = () => {
                   <LocationSearch
                     value={formData.returnStation}
                     onChange={handleStationChange('return')}
-                    label="Return location"
+                    label="return"
                     searchMode={searchModes.return}
                     placeholder="Airport, city or address"
                   />
@@ -402,16 +414,14 @@ export const BookingMask = () => {
                 <Grid item xs={12}>
                   <FormControlLabel
                     control={
-                      <Checkbox
-                        checked={differentReturnLocation}
-                        onChange={(e) => {
-                          setDifferentReturnLocation(e.target.checked);
-                          if (!e.target.checked) {
-                            setSearchModes(prev => ({
-                              ...prev,
-                              return: prev.pickup
-                            }));
-                          }
+                      <Checkbox 
+                        checked={differentDropoff}
+                        onChange={(e) => setDifferentDropoff(e.target.checked)}
+                        sx={{
+                          color: SIXT_ORANGE,
+                          '&.Mui-checked': {
+                            color: SIXT_ORANGE,
+                          },
                         }}
                       />
                     }
@@ -423,7 +433,7 @@ export const BookingMask = () => {
                 <Grid item xs={12}>
                   <Grid container spacing={2}>
                     {/* Pickup Location */}
-                    <Grid item xs={differentReturnLocation ? 6 : 12}>
+                    <Grid item xs={12} md={differentDropoff ? 6 : 12}>
                       <Box>
                         <Tabs
                           value={searchModes.pickup}
@@ -449,7 +459,7 @@ export const BookingMask = () => {
                         <LocationSearch
                           value={formData.pickupStation}
                           onChange={handleStationChange('pickup')}
-                          label="Pick-up location"
+                          label="pickup"
                           searchMode={searchModes.pickup}
                           placeholder="Airport, city or address"
                         />
@@ -457,8 +467,8 @@ export const BookingMask = () => {
                     </Grid>
 
                     {/* Return Location */}
-                    {differentReturnLocation && (
-                      <Grid item xs={6}>
+                    {differentDropoff && (
+                      <Grid item xs={12} md={6}>
                         <Box>
                           <Tabs
                             value={searchModes.return}
@@ -484,7 +494,7 @@ export const BookingMask = () => {
                           <LocationSearch
                             value={formData.returnStation}
                             onChange={handleStationChange('return')}
-                            label="Return location"
+                            label="return"
                             searchMode={searchModes.return}
                             placeholder="Airport, city or address"
                           />
