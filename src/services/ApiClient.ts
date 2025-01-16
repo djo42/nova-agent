@@ -20,15 +20,15 @@ export class ApiClient {
   ): Promise<T> {
     const accessToken = await this.getToken();
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        ...options.headers,
+    const requestOptions = Object.assign({}, options, {
+      headers: Object.assign({}, options.headers, {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-      },
+      }),
     });
+
+    const response = await fetch(`${this.baseUrl}${endpoint}`, requestOptions);
 
     if (!response.ok) {
       const text = await response.text();
